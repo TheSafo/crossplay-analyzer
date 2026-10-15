@@ -3,2386 +3,1000 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crossplay Board Analyzer</title>
+<title>Crossplay Game Review</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; padding: 20px; }
-  .container { max-width: 1100px; margin: 0 auto; }
-  h1 { font-size: 1.6rem; margin-bottom: 4px; color: #fff; }
-  .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 20px; }
-  .input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-  .input-row input { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid #333; border-radius: 6px; background: #16213e; color: #e0e0e0; font-size: 0.95rem; }
-  .input-row input:focus { outline: none; border-color: #4a6fa5; }
-  button { padding: 10px 20px; border: none; border-radius: 6px; font-size: 0.95rem; cursor: pointer; font-weight: 600; }
-  .file-picker { display: inline-block; padding: 10px 20px; border-radius: 6px; background: #25375b; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; text-align: center; }
-  .file-picker:hover { background: #30466f; }
-  .file-picker:focus-within { outline: 2px solid #4a6fa5; outline-offset: 2px; }
-  .file-input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  #analyzeBtn { background: #4a6fa5; color: #fff; }
-  #analyzeBtn:hover { background: #5a7fb5; }
-  #analyzeBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .stats { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-  .stat { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 12px 20px; min-width: 120px; text-align: center; }
-  .stat .val { font-size: 1.5rem; font-weight: 700; color: #fff; }
-  .stat .lbl { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
-  .content { display: flex; gap: 20px; flex-wrap: wrap; }
-  .board-wrap { flex: 1; min-width: 300px; }
-  .words-wrap { width: 260px; flex-shrink: 0; }
-  table.board { border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 14px; }
-  table.board th, table.board td { width: 28px; height: 28px; text-align: center; border: 1px solid #333; padding: 0; }
-  table.board th { background: #16213e; color: #888; font-size: 11px; font-weight: 400; }
-  table.board td.tile { background: #2980b9; color: #fff; font-weight: 700; }
-  table.board td.blank-tile { background: #2980b9; color: #f0d060; font-weight: 700; font-style: italic; }
-  table.board td.empty { background: #1e2d4a; color: #555; font-size: 9px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; padding: 22px; background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  button, input { font: inherit; }
+  button { border: 0; border-radius: 6px; padding: 9px 13px; background: #30466f; color: #fff; font-weight: 600; cursor: pointer; }
+  button:hover:not(:disabled) { background: #405a87; }
+  button:disabled { opacity: .48; cursor: not-allowed; }
+  a { color: #9dbce0; }
+  .container { max-width: 1280px; margin: 0 auto; }
+  .site-nav { margin-bottom: 13px; color: #888; font-size: .86rem; }
+  .site-nav a { text-decoration: none; }
+  .site-nav a:hover { text-decoration: underline; }
+  h1 { margin: 0 0 5px; color: #fff; font-size: 1.65rem; }
+  h2 { margin: 0; color: #fff; font-size: 1.2rem; }
+  h3 { margin: 0 0 10px; color: #fff; font-size: 1rem; }
+  .subtitle { margin: 0 0 18px; color: #999; }
+  .panel { border: 1px solid #333; border-radius: 9px; background: #16213e; padding: 15px; }
+  .account { margin-bottom: 18px; }
+  .account-top, .section-heading, .review-heading, .turn-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .account-state { color: #b9c8db; font-size: .9rem; }
+  .account-state.connected { color: #75d39a; }
+  .account-state.error { color: #f08080; }
+  .account-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .account-form input { flex: 1; min-width: 220px; padding: 10px 12px; border: 1px solid #3a4760; border-radius: 6px; background: #101a32; color: #fff; }
+  .account-form input:focus { outline: 2px solid #4a6fa5; }
+  .account-help, .muted { color: #8c96a7; font-size: .82rem; line-height: 1.45; }
+  .account-help { margin: 9px 0 0; }
+  .danger-button { background: #563a48; }
+  .danger-button:hover:not(:disabled) { background: #744556; }
+  .workspace { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .games-panel { min-height: 330px; }
+  .section-heading { margin-bottom: 12px; }
+  .game-count { color: #8792a6; font-size: .78rem; }
+  .game-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
+  .game-card { width: 100%; padding: 11px 12px; border: 1px solid #2c3a56; background: #1c2b49; text-align: left; }
+  .game-card:hover:not(:disabled), .game-card.selected { border-color: #5f86ba; background: #24395d; }
+  .game-card:disabled { opacity: .8; }
+  .game-card-top, .game-card-bottom { display: flex; justify-content: space-between; gap: 8px; }
+  .game-card-top { color: #fff; font-weight: 650; }
+  .game-card-bottom { margin-top: 5px; color: #9aa7bb; font-size: .8rem; font-weight: 400; }
+  .empty-state { padding: 16px 4px; color: #929bad; font-size: .9rem; line-height: 1.5; }
+  .review { min-width: 0; }
+  .review-placeholder { min-height: 230px; display: grid; place-items: center; text-align: center; color: #8f99aa; line-height: 1.5; }
+  .review-heading { align-items: flex-start; margin-bottom: 12px; }
+  .opponent-label { margin-top: 4px; color: #9ba6b7; }
+  .scoreline { padding: 9px 12px; border-radius: 7px; background: #101a32; color: #fff; white-space: nowrap; font-size: 1.05rem; font-weight: 700; }
+  .review-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 270px); gap: 14px; align-items: start; }
+  .turn-panel { min-width: 0; }
+  .turn-controls { justify-content: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
+  .turn-controls select { max-width: 100%; padding: 8px 10px; border: 1px solid #3a4760; border-radius: 6px; background: #101a32; color: #fff; }
+  .board-view-button { padding: 8px 10px; background: #34435e; font-size: .82rem; }
+  .turn-meta { margin: 0 0 12px; padding: 11px 12px; border-radius: 7px; background: #101a32; }
+  .turn-action { color: #fff; font-weight: 700; font-family: 'SFMono-Regular', Consolas, monospace; }
+  .turn-subtitle { margin-top: 5px; color: #aab4c3; font-size: .84rem; line-height: 1.5; }
+  .board-scroll { overflow: auto; padding-bottom: 5px; }
+  table.board { border-collapse: collapse; table-layout: fixed; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; }
+  table.board th, table.board td { width: 30px; min-width: 30px; height: 30px; padding: 0; border: 1px solid #34415a; text-align: center; }
+  table.board th { background: #101a32; color: #8490a4; font-size: 10px; font-weight: 500; }
+  table.board td.empty { background: #1e2d4a; color: #59677e; }
   table.board td.premium-3l { background: #31452d; color: #a8c38b; font-weight: 700; }
   table.board td.premium-2l { background: #4a4027; color: #ddc682; font-weight: 700; }
   table.board td.premium-2w { background: #293d59; color: #9dbce0; font-weight: 700; }
   table.board td.premium-3w { background: #472c51; color: #d08adb; font-weight: 700; }
-  .tile-pool { background: #16213e; border: 1px solid #333; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
-  .tile-pool-summary { color: #aaa; font-size: 0.85rem; margin-bottom: 8px; }
-  .tile-pool-list { display: flex; gap: 6px; flex-wrap: wrap; }
-  .tile-chip { background: #25375b; border: 1px solid #40547c; border-radius: 4px; color: #fff; font-family: 'Courier New', monospace; font-weight: 700; padding: 3px 7px; }
-  .tile-pool-note { color: #777; font-size: 0.75rem; margin-top: 8px; }
-  .final-turn-panel { background: #16213e; border: 1px solid #8e44ad; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
-  .final-turn-panel fieldset { border: 0; }
-  .final-turn-panel legend { color: #fff; font-weight: 700; margin-bottom: 8px; }
-  .final-turn-panel label { display: block; color: #ccc; font-size: 0.85rem; margin: 7px 0; cursor: pointer; }
-  .final-turn-panel input { margin-right: 7px; }
-  .words-wrap h3 { font-size: 1rem; margin-bottom: 8px; color: #fff; }
-  .word-list { max-height: 500px; overflow-y: auto; }
-  .word-list table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  .word-list th, .word-list td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #222; }
-  .word-list th { color: #888; font-weight: 400; }
-  .word-list td { color: #e0e0e0; }
-  #status { margin-bottom: 12px; font-size: 0.9rem; color: #888; }
-  #status.error { color: #e74c3c; }
-  #status.loading { color: #f39c12; }
-  #status.done { color: #2ecc71; }
-  .drop-zone { border: 2px dashed #333; border-radius: 8px; padding: 20px; text-align: center; color: #555; font-size: 0.85rem; margin-bottom: 16px; transition: border-color 0.2s; }
-  .drop-zone.drag-over { border-color: #4a6fa5; color: #4a6fa5; }
-  .hidden { display: none; }
-  #kibitzBtn { background: #8e44ad; color: #fff; margin-top: 12px; }
-  #kibitzBtn:hover { background: #9b59b6; }
-  #kibitzBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .moves-wrap { width: 340px; flex-shrink: 0; }
-  .moves-wrap h3 { font-size: 1rem; margin-bottom: 8px; color: #fff; }
-  .moves-list { max-height: 500px; overflow-y: auto; }
-  .moves-list table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  .moves-list th, .moves-list td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #222; }
-  .moves-list th { color: #888; font-weight: 400; }
-  .moves-list td { color: #e0e0e0; }
-  .moves-list tr:first-child td { color: #2ecc71; font-weight: 700; }
-  #engineStatus { font-size: 0.8rem; color: #888; margin-top: 4px; }
-  .hint { color: #777; font-size: 0.75rem; margin-top: 8px; }
+  table.board td.tile { background: #2980b9; color: #fff; font-size: 14px; font-weight: 700; }
+  table.board td.blank-tile { color: #f0d060; font-style: italic; }
+  table.board td.last-play { outline: 2px solid #f1c75b; outline-offset: -3px; }
+  .board-legend { margin-top: 7px; color: #8994a5; font-size: .75rem; }
+  .turn-list-panel { max-height: 650px; overflow: auto; }
+  .turn-list { display: grid; gap: 5px; }
+  .turn-row { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 9px; border: 1px solid transparent; background: transparent; text-align: left; font-size: .8rem; }
+  .turn-row:hover:not(:disabled), .turn-row.selected { border-color: #3d5d88; background: #1e2e4c; }
+  .turn-row.mine .turn-player { color: #9dc5f5; }
+  .turn-row .turn-player { color: #c4ccd8; }
+  .turn-row .turn-score { color: #9ca9bb; white-space: nowrap; }
+  .analysis-panel { margin-top: 14px; }
+  .analysis-panel p { margin: 8px 0; }
+  .analysis-button { background: #7e43a4; }
+  .analysis-button:hover:not(:disabled) { background: #9253b8; }
+  .analysis-status { min-height: 20px; color: #aeb8c8; font-size: .82rem; line-height: 1.45; }
+  .moves-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: .82rem; }
+  .moves-table th, .moves-table td { padding: 6px 5px; border-bottom: 1px solid #29354d; text-align: left; }
+  .moves-table th { color: #8e9aad; font-weight: 500; }
+  .moves-table tr:first-child td { color: #75d39a; font-weight: 700; }
+  .analysis-note { color: #8c96a7; font-size: .76rem; line-height: 1.4; }
+  .trend-panel { margin: 14px 0; }
+  .trend-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .trend-status { min-height: 20px; margin: 8px 0; color: #aeb8c8; font-size: .82rem; }
+  .trend-chart { width: 100%; min-height: 230px; overflow: hidden; }
+  .trend-chart svg { display: block; width: 100%; height: auto; }
+  .trend-legend { display: flex; gap: 16px; flex-wrap: wrap; color: #b8c3d2; font-size: .8rem; }
+  .trend-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .trend-swatch { display: inline-block; width: 15px; height: 3px; border-radius: 2px; }
+  .commonness-panel { margin-top: 12px; padding: 11px; border-radius: 7px; background: #101a32; }
+  .commonness-panel h4 { margin: 0 0 7px; color: #fff; font-size: .9rem; }
+  .commonness-list { display: grid; gap: 6px; padding-left: 20px; }
+  .commonness-list li { color: #c4ccd8; font-size: .8rem; line-height: 1.4; }
+  .commonness-tag { color: #b6c5da; }
+  .commonness-common { color: #75d39a; }
+  .commonness-uncommon { color: #e8c77a; }
+  .commonness-missing { color: #9ba6b7; }
+  .analysis-note a { color: #9dbce0; }
+  .hidden { display: none !important; }
+  @media (max-width: 900px) {
+    body { padding: 14px; }
+    .workspace { grid-template-columns: 1fr; }
+    .game-list { max-height: 290px; }
+    .review-body { grid-template-columns: minmax(0, 1fr) minmax(200px, 260px); }
+  }
+  @media (max-width: 650px) {
+    .review-heading { flex-direction: column; }
+    .review-body { grid-template-columns: 1fr; }
+    .turn-list-panel { max-height: 270px; }
+    .scoreline { white-space: normal; }
+    table.board th, table.board td { width: 27px; min-width: 27px; height: 27px; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Crossplay Board Analyzer</h1>
-  <p class="subtitle">Choose a screenshot, paste a URL, or drop an image to parse the board and find all words.</p>
+<main class="container">
+  <nav class="site-nav"><span>Game Review</span> · <a href="screenshot.html">Screenshot Analyzer</a> · <a href="manual.html">Manual Board</a></nav>
+  <h1>Crossplay Game Review</h1>
+  <p class="subtitle">Load finished games from your NYT Crossplay account, replay each turn, and compare it with Quackle.</p>
 
-
-  <div class="input-row">
-    <input type="text" id="imageUrlInput" placeholder="Paste image URL (imgur, etc.)" />
-    <label class="file-picker" for="imageFileInput">Choose from Photo Library</label>
-    <input class="file-input" type="file" id="imageFileInput" accept="image/*" />
-    <button id="analyzeBtn" onclick="analyze()">Analyze Board</button>
-  </div>
-
-  <div class="drop-zone" id="dropZone">
-    Or drag & drop / paste a screenshot here
-  </div>
-
-  <div id="status"></div>
-
-  <div class="stats hidden" id="statsRow">
-    <div class="stat"><div class="val" id="p1Score">--</div><div class="lbl" id="p1Name">Player 1</div></div>
-    <div class="stat"><div class="val" id="p2Score">--</div><div class="lbl" id="p2Name">Player 2</div></div>
-    <div class="stat"><div class="val" id="rackDisplay">--</div><div class="lbl">Your Rack</div></div>
-    <div class="stat"><div class="val" id="tileCount">--</div><div class="lbl">Tiles on Board</div></div>
-    <div class="stat"><div class="val" id="bagCount">--</div><div class="lbl">Tiles in Bag</div></div>
-  </div>
-
-  <div class="tile-pool hidden" id="tilePool">
-    <div class="tile-pool-summary" id="tilePoolSummary"></div>
-    <div class="tile-pool-list" id="unseenTiles"></div>
-    <div class="tile-pool-note">Unseen tiles include the hidden computer rack and the bag.</div>
-  </div>
-
-  <div class="final-turn-panel hidden" id="finalTurnPanel">
-    <fieldset>
-      <legend>Crossplay final-turn state</legend>
-      <label><input type="radio" name="finalTurnState" value="2">The computer emptied the bag on its last move — 2 final turns remain</label>
-      <label><input type="radio" name="finalTurnState" value="1">The bag was already empty before the computer's last move — 1 final turn remains</label>
-      <p class="tile-pool-note">A screenshot cannot show which final turn is next. Select the state before running Quackle.</p>
-    </fieldset>
-  </div>
-
-  <div class="content hidden" id="contentRow">
-    <div class="board-wrap" id="boardContainer"></div>
-    <div class="words-wrap" id="wordsContainer"></div>
-    <div class="moves-wrap hidden" id="movesContainer"></div>
-  </div>
-
-  <button id="kibitzBtn" class="hidden" onclick="findBestMoves()">Find Best Moves (Quackle Engine)</button>
-  <div id="engineStatus"></div>
-
-  <div id="debugSection" class="hidden" style="margin-top:20px;">
-    <h3 style="color:#888;cursor:pointer;" onclick="document.getElementById('debugContent').classList.toggle('hidden')">Debug: CV Detection (click to toggle)</h3>
-    <div id="debugContent">
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <div><p style="color:#888;font-size:0.8rem;">Grid Overlay</p><canvas id="debugGridCanvas" style="max-width:400px;width:100%;border:1px solid #333;"></canvas></div>
-        <div><p style="color:#888;font-size:0.8rem;">Tile Mosaic (local OCR)</p><img id="debugMosaicImg" style="max-width:600px;width:100%;border:1px solid #333;" /></div>
-      </div>
-      <pre id="debugLog" style="color:#888;font-size:0.75rem;max-height:200px;overflow-y:auto;margin-top:8px;"></pre>
+  <section class="panel account" aria-label="NYT account connection">
+    <div class="account-top">
+      <div id="connectionState" class="account-state">Checking local connection…</div>
+      <button id="forgetButton" class="danger-button hidden" type="button">Forget cookie</button>
     </div>
+    <form id="cookieForm" class="account-form">
+      <input id="cookieInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"
+        aria-label="NYT-S cookie" placeholder="Paste your NYT-S session cookie">
+      <button id="saveCookieButton" type="submit">Connect</button>
+    </form>
+    <p class="account-help">The NYT-S value is sent only to this local app and saved in a private .env file on this computer. It is never stored in the browser. Use the value of the NYT-S cookie from a signed-in NYTimes browser session.</p>
+  </section>
+
+  <div class="workspace">
+    <section class="panel games-panel" aria-label="Recent games">
+      <div class="section-heading">
+        <div>
+          <h2>Finished games</h2>
+          <div id="gameCount" class="game-count">Connect to load your games</div>
+        </div>
+        <button id="refreshButton" type="button" disabled>Refresh</button>
+      </div>
+      <div id="gameList" class="game-list"><div class="empty-state">Connect your NYT account to load recent games.</div></div>
+    </section>
+
+    <section id="reviewPanel" class="panel review" aria-label="Game review">
+      <div class="review-placeholder">Choose a finished game to replay its turns.</div>
+    </section>
   </div>
-</div>
+</main>
 
 <script>
-// ── Status ────────────────────────────────────────────────────────────────
-function setStatus(msg, cls) {
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = cls || '';
-}
-
-// ── Image drop/paste → base64 ─────────────────────────────────────────────
-let base64Image = null;
-
-const dropZone = document.getElementById('dropZone');
-const imageFileInput = document.getElementById('imageFileInput');
-
-imageFileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (file) loadFile(file);
-});
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) loadFile(file);
-});
-
-document.addEventListener('paste', e => {
-  const items = e.clipboardData.items;
-  for (const item of items) {
-    if (item.type.startsWith('image/')) {
-      loadFile(item.getAsFile());
-      return;
-    }
-  }
-});
-
-function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    base64Image = { data: reader.result.split(',')[1], media_type: file.type };
-    document.getElementById('imageUrlInput').value = '';
-    dropZone.textContent = 'Image loaded: ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
-    imageFileInput.value = '';
-    setStatus('Image ready. Click Analyze Board.', 'done');
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── Offline CV Board Parsing ──────────────────────────────────────────────
-
-function rgbToHsv(r, g, b) {
-  // Returns [H, S, V] in OpenCV convention: H=[0,179], S=[0,255], V=[0,255]
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const d = max - min;
-  let h = 0, s = max === 0 ? 0 : (d / max) * 255, v = max * 255;
-  if (d !== 0) {
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 30;
-    else if (max === g) h = ((b - r) / d + 2) * 30;
-    else h = ((r - g) / d + 4) * 30;
-  }
-  return [Math.round(h), Math.round(s), Math.round(v)];
-}
-
-function detectBoardGrid(imageData, width, height) {
-  return detectBoardGridFromCellRows(imageData, width, height)
-    || detectBoardGridFromPremiumLabels(imageData, width, height);
-}
-
-function detectBoardGridFromCellRows(imageData, width, height) {
-  const rowProfile = new Uint32Array(height);
-  const searchTop = Math.floor(height * 0.20);
-  const searchBottom = Math.floor(height * 0.80);
-
-  for (let y = searchTop; y < searchBottom; y++) {
-    let count = 0;
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-      if (Math.min(imageData[idx], imageData[idx + 1], imageData[idx + 2]) < 250) count++;
-    }
-    rowProfile[y] = count;
-  }
-
-  const runs = [];
-  let start = -1;
-  for (let y = searchTop; y < searchBottom; y++) {
-    if (rowProfile[y] > width * 0.50) {
-      if (start < 0) start = y;
-    } else if (start >= 0) {
-      if (y - start >= 10) runs.push([start, y - 1]);
-      start = -1;
-    }
-  }
-  if (start >= 0 && searchBottom - start >= 10) runs.push([start, searchBottom - 1]);
-
-  let best = null;
-  const expectedPitch = width / 15;
-  for (let i = 0; i + 15 <= runs.length; i++) {
-    const candidate = runs.slice(i, i + 15);
-    const pitches = [];
-    const heights = [];
-    for (let j = 0; j < candidate.length; j++) {
-      heights.push(candidate[j][1] - candidate[j][0] + 1);
-      if (j > 0) pitches.push(candidate[j][0] - candidate[j - 1][0]);
-    }
-    const pitch = medianOf(pitches);
-    const runHeight = medianOf(heights);
-    if (pitch < expectedPitch * 0.75 || pitch > expectedPitch * 1.10) continue;
-
-    const pitchError = Math.max(...pitches.map(value => Math.abs(value - pitch))) / pitch;
-    const heightError = Math.max(...heights.map(value => Math.abs(value - runHeight))) / pitch;
-    if (pitchError > 0.15 || heightError > 0.20) continue;
-
-    const score = pitchError + heightError + Math.abs(pitch - expectedPitch) / expectedPitch;
-    if (!best || score < best.score) best = { candidate, pitch, runHeight, score };
-  }
-
-  if (!best) return null;
-
-  const cellW = best.pitch;
-  const cellH = best.pitch;
-  const gridTop = best.candidate[0][0] - Math.max(0, (best.pitch - best.runHeight) / 2);
-  const gridLeft = (width - 15 * cellW) / 2;
-  const hGrid = [], vGrid = [];
-  for (let i = 0; i <= 15; i++) {
-    hGrid.push(Math.max(0, Math.min(height - 1, Math.round(gridTop + i * cellH))));
-    vGrid.push(Math.max(0, Math.min(width - 1, Math.round(gridLeft + i * cellW))));
-  }
-
-  console.log(`Grid detection (cell rows): cellW=${cellW.toFixed(1)} cellH=${cellH.toFixed(1)}, gridLeft=${gridLeft.toFixed(1)}, gridTop=${gridTop.toFixed(1)}`);
-  return { hGrid, vGrid, cellW, cellH, method: 'cell-rows' };
-}
-
-// ── Premium label detection (NYT Crossplay) ─────────────────────────────
-// The NYT Crossplay board is a FIXED 15x15 template whose premium squares
-// carry dark text labels ("3W"/"2L") on pale pastel backgrounds. The labels
-// are always present (even with no tiles), so they are stable, state-
-// independent anchors for grid detection — unlike blue tiles, which depend
-// on the current board state.
-//
-// Every board row and column has at least one label, so the label rows are
-// spaced exactly one cell apart. The row projection has clean gaps between
-// rows (labels are row-confined), which gives cellH and gridTop exactly.
-// The board is square, so cellW = cellH; gridLeft comes from the label
-// column extent (robust to a few px). This is resolution-independent.
-// Falls back to the prior-based heuristic if labels can't be found.
-function detectBoardGridFromPremiumLabels(imageData, width, height) {
-  // Premium label mask: dark, saturated pixels (the "3W"/"2L" glyphs).
-  // Excludes white tile letters (bright), pale pastel backgrounds (low
-  // saturation), and blue tiles (bright blue).
-  const labelMask = new Uint8Array(width * height);
-  let labelCount = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-      if (v < 190 && s > 30) {
-        labelMask[y * width + x] = 1;
-        labelCount++;
-      }
-    }
-  }
-
-  if (labelCount < width * 0.02) {
-    console.warn('Premium labels not found, falling back to prior-based grid');
-    return detectBoardGridPrior(imageData, width, height);
-  }
-
-  // Row projection of labels
-  const rowProj = new Float32Array(height);
-  let maxRow = 0;
-  for (let y = 0; y < height; y++) {
-    let c = 0;
-    for (let x = 0; x < width; x++) c += labelMask[y * width + x];
-    rowProj[y] = c;
-    if (c > maxRow) maxRow = c;
-  }
-
-  // Contiguous runs of rows with label density
-  const rowThresh = Math.max(3, maxRow * 0.01);
-  const runs = [];
-  let start = -1;
-  for (let y = 0; y < height; y++) {
-    if (rowProj[y] > rowThresh) {
-      if (start < 0) start = y;
-    } else if (start >= 0) {
-      if (y - start >= 10) runs.push([start, y - 1]);
-      start = -1;
-    }
-  }
-  if (start >= 0 && height - start >= 10) runs.push([start, height - 1]);
-  if (runs.length < 3) {
-    console.warn('Too few label rows, falling back to prior-based grid');
-    return detectBoardGridPrior(imageData, width, height);
-  }
-
-  // Cluster runs by proximity; the board is the largest cluster (its ~15
-  // rows are spaced ~cellH apart; UI text below is separated by a big gap).
-  const clusters = [[runs[0]]];
-  for (let i = 1; i < runs.length; i++) {
-    const last = clusters[clusters.length - 1];
-    if (runs[i][0] - last[last.length - 1][1] < 150) last.push(runs[i]);
-    else clusters.push([runs[i]]);
-  }
-  let boardRuns = clusters[0];
-  for (const cl of clusters) if (cl.length > boardRuns.length) boardRuns = cl;
-  if (boardRuns.length < 3) {
-    console.warn('Board label cluster too small, falling back to prior-based grid');
-    return detectBoardGridPrior(imageData, width, height);
-  }
-
-  // cellH = median spacing between consecutive board row centers; gridTop from first.
-  const centers = boardRuns.map(([a, b]) => (a + b) / 2).sort((a, b) => a - b);
-  const spacings = [];
-  for (let i = 1; i < centers.length; i++) spacings.push(centers[i] - centers[i - 1]);
-  const cellH = medianOf(spacings);
-  const gridTop = centers[0] - 0.5 * cellH;
-  const cellW = cellH; // square board
-
-  // Horizontal: label column extent (restricted to the board band) -> gridLeft
-  const bandTop = Math.max(0, Math.floor(gridTop));
-  const bandBottom = Math.min(height - 1, Math.ceil(gridTop + 15 * cellH));
-  const colProj = new Float32Array(width);
-  for (let y = bandTop; y < bandBottom; y++) {
-    for (let x = 0; x < width; x++) {
-      if (labelMask[y * width + x]) colProj[x]++;
-    }
-  }
-  let maxCol = 0;
-  for (let x = 0; x < width; x++) if (colProj[x] > maxCol) maxCol = colProj[x];
-  const colThresh = Math.max(3, maxCol * 0.05);
-  let textLeft = -1, textRight = -1;
-  for (let x = 0; x < width; x++) {
-    if (colProj[x] > colThresh) { if (textLeft < 0) textLeft = x; textRight = x; }
-  }
-  if (textLeft < 0) {
-    console.warn('Label column extent not found, falling back to prior-based grid');
-    return detectBoardGridPrior(imageData, width, height);
-  }
-  // Labels are inset from cell edges by ~0.13 cell; the result is robust to
-  // a wide range of this constant.
-  const gridLeft = textLeft - 0.13 * cellW;
-
-  // Build grid lines (15 square cells)
-  const hGrid = [], vGrid = [];
-  for (let i = 0; i <= 15; i++) {
-    hGrid.push(Math.max(0, Math.min(height - 1, Math.round(gridTop + i * cellH))));
-    vGrid.push(Math.max(0, Math.min(width - 1, Math.round(gridLeft + i * cellW))));
-  }
-
-  console.log(`Grid detection (premium-label): cellW=${cellW.toFixed(1)} cellH=${cellH.toFixed(1)}, gridLeft=${gridLeft.toFixed(1)}, gridTop=${gridTop.toFixed(1)}, boardWidth=${(15*cellW).toFixed(0)}px (${(15*cellW/width*100).toFixed(1)}% of image)`);
-
-  return { hGrid, vGrid, cellW, cellH, method: 'premium' };
-}
-
-function medianOf(arr) {
-  if (arr.length === 0) return 0;
-  const s = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
-
-
-// ── Deterministic letter OCR (template matching — no API key) ───────────
-// Tile letters are rendered in a bold sans-serif font. We extract each
-// tile's letter glyph (largest white connected component), normalize it
-// (bilinear resize to a fixed height, center by center of mass), and match
-// against 26 pre-rendered A-Z templates using Chamfer distance (Euclidean
-// distance transform). Fully deterministic and offline.
-
-const GLYPH_TEMPLATES = { H: 32, W: 44, chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', data: {
-  A: 'AAA/4AAAAAP+AAAAAD/gAAAAB/8AAAAAf/AAAAAH/4AAAAD/+AAAAA//gAAAAf38AAAAH9/AAAAB/fwAAAA/j+AAAAP4/gAAAD8P4AAAB/B/AAAAfwfwAAAP4H+AAAD+A/gAAA/gP4AAAf4D/AAAH///wAAB///8AAA////gAAP///4AAD///+AAB/gA/wAAfwAH8AAP8AB/gAD/AAf4AA/gAD+AAf4AA/wAAAAAAAA=',
-  B: 'AD///AAAA///8AAAP///wAAD///8AAA////gAAP///8AAD+AD/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AP4AAD+AP+AAA////AAAP///gAAD///8AAA////gAAP///8AAD+AD/AAA/gAf4AAP4AD+AAD+AA/gAA/gAP4AAP4AD+AAD+AB/gAA/gA/4AAP///8AAD///+AAA////gAAP///wAAD///wAAA///wAA=',
-  C: 'AAAP+AAAAAf/4AAAAP//gAAAH//8AAAD///gAAB/5/4AAA/4D/AAAP4AfwAAH+AD+AAB/AA/gAAfwAH4AAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAB/AA/gAAfwAP4AAH+AH8AAA/wB/AAAP+B/gAAB///4AAAf//8AAAD//+AAAAP//AAAAB//gAAAAD/gAA=',
-  D: 'AAAAAAAAA///gAAAP//+AAAD///wAAA///+AAAP///wAAD///+AAA/gB/gAAP4AP8AAD+AB/AAA/gAf4AAP4AD+AAD+AA/gAA/gAP4AAP4AD+AAD+AA/gAA/gAP4AAP4AD+AAD+AA/gAA/gAP4AAP4AD+AAD+AA/gAA/gAfwAAP4AH8AAD+AD/AAA/gB/gAAP4A/4AAD///8AAA////AAAP///gAAD///wAAA///wAA=',
-  E: 'AAAAAAAAAP///gAAD///4AAA///+AAAP///gAAD///4AAA///+AAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAP///AAAD///wAAA///8AAAP///AAAD///wAAA///8AAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA////AAAP///wAAD///8AAA////AAAP///wA=',
-  F: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///4AAA///+AAAP///gAAD///4AAA///+AAAP///gAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA///4AAAP//+AAAD///gAAA///4AAAP//+AAAD///gAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAA=',
-  G: 'AAA/8AAAAA//wAAAA///AAAAf//4AAAP///AAAH/j/wAAD/gH+AAA/wA/wAAf4AH8AAH8AB/AAB/AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4B//AAD+Af/wAA/gH/8AAP4B//AAD+Af/wAA/gAD8AAP4AA/AAB/AAPwAAfwAH8AAD+AD/AAA/4B/wAAH/j/8AAA////AAAH//3wAAA//58AAAH/8PAAAAf8AAA=',
-  H: 'AAAAAAAAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA////wAAP///8AAD////AAA////wAAP///8AAD////AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwA=',
-  I: 'AAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAA=',
-  J: 'AAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAA/AfwAAAPwH8AAAD8B/AAAA/AfwAAAP4H8AAAD+B/AAAA/g/wAAAH//4AAAB//+AAAAP//AAAAD//wAAAAAAAAAAAAAAAAA=',
-  K: 'AA/gA/4AAP4Af8AAD+AP+AAA/gD/AAAP4B/gAAD+A/wAAA/gf4AAAP4P8AAAD+H+AAAA/j/AAAAP5/gAAAD+/wAAAA//4AAAAP/+AAAAD//wAAAA//8AAAAP//gAAAD//8AAAA///gAAAP+f4AAAD/D/AAAA/g/4AAAP4H+AAAD+A/wAAA/gP+AAAP4B/wAAD+AP8AAA/gD/gAAP4Af8AAD+AD/gAA/gA/4AAP4AH/A=',
-  L: 'AAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP///gAAD///4AAA///+AAAAAAAAAAAAAAAAAAAAAAA=',
-  M: 'AAAAAAAAH/gA/8AB/4AP/AAf+AD/wAH/wB/8AB/8Af/AAf/AH/wAH/wB/8AB/+Af/AAf/gP/wAH74D78AB++A+/AAfvwPvwAH58Hz8AB+fB8/AAfnwfPwAH5+Hz8AB+Pj8/AAfj4+PwAH4+Pj8AB+Pj4/AAfh9+PwAH4ffD8AB+H3w/AAfh98PwAH4f/D8AB+D/g/AAfg/4PwAH4P+D8AB+D/g/AAfg/4PwAH4H8D8A=',
-  N: 'AAAAAAAAA/gAPwAAP8AD8AAD/gA/AAA/4APwAAP/AD8AAD/wA/AAA/+APwAAP/gD8AAD/8A/AAA//APwAAP/4D8AAD9/A/AAA/PwPwAAPz+D8AAD8fg/AAA/D8PwAAPw/j8AAD8H4/AAA/B/PwAAPwPz8AAD8B+/AAA/Af/wAAPwD/8AAD8A//AAA/AH/wAAPwB/8AAD8AP/AAA/AB/wAAPwAf8AAD8AD/AAA/AA/wA=',
-  O: 'AAB/8AAAAB//wAAAA//+AAAA///wAAAP//+AAAH/j/wAAD/AP+AAA/gA/gAAfwAH8AAH8AB/AAD+AAPwAA/gAD+AAP4AA/gAD+AAP4AA/AAD+AAPwAAfgAD8AAH4AA/AAD+AAP4AA/gAD+AAP4AA/gAD+AAP4AA/AAB/AAfwAAfwAH8AAD+AD+AAA/wD/gAAH/j/wAAA///4AAAP//8AAAA//+AAAAH//AAAAAf/AAA=',
-  P: 'AAAAAAAAAAAAAAAAAAAAAAAA///gAAAP//+AAAD///wAAA///+AAAP///wAAD///8AAA/gB/gAAP4Af4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4Af4AAD+Af8AAA////AAAP///wAAD///4AAA///8AAAP//8AAAD//wAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAAAD+AAAAAA/gAAAAAP4AAAA=',
-  Q: 'AAB/4AAAAB//gAAAB//8AAAA///wAAAf//+AAAH/D/gAAD/AP8AAB/AB/AAAfwAP4AAH4AB+AAD+AAfwAA/gAH8AAPwAA/AAD8AAfwAA/AAD8AAPwAA/AAD8AAPwAA/AAH8AAPwAB/AAD+AEfwAA/gDn4AAH4B/+AAB/Af/gAAP4D/wAAD/Af8AAAf//+AAAD///wAAAf//+AAAD///wAAAP/z4AAAAfgcAAAAAADAA=',
-  R: 'AAAAAAAAAAAAAAAAP//+AAAD///4AAA////AAAP///4AAD///+AAA////wAAP4AP8AAD+AB/AAA/gAfwAAP4AD8AAD+AA/AAA/gAfwAAP4AH8AAD+AD+AAA////gAAP///wAAD///wAAA///+AAAP///wAAD+Af+AAA/gB/gAAP4AP4AAD+AD/AAA/gA/wAAP4AH8AAD+AB/AAA/gAfwAAP4AH8AAD+AB/AAA/gAfwA=',
-  S: 'AAB/4AAAAB//gAAAA//8AAAAf//wAAAP//8AAAH/H/gAAB/AP4AAAfgB/AAAPwAfwAAD8AD8AAA/gAAAAAH8AAAAAB/4AAAAAf/8AAAAD//4AAAAf//gAAAD//+AAAAH//wAAAAH/8AAAAAH/gAAAAAf4AAAAAD+AAA/AAfgAAP4AH4AAD+AD+AAA/wB/gAAH/j/wAAA///4AAAH//+AAAA///AAAAH//AAAAAP/AAA=',
-  T: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD////AAA////wAAP///8AAD////AAA////wAAP///8AAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAA=',
-  U: 'AD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD+AD+AAA/gA/gAAP4AP4AAD/AH8AAAf4D/AAAH///wAAA///4AAAH//8AAAA//+AAAAH//AAAAAP+AAA=',
-  V: 'AAAAAAAAAAAAAAAAfwAD+AAH+AA/gAA/gAfwAAP4AH8AAD/AB/AAAfwA/gAAH8AP4AAB/AD+AAAP4A/AAAD+AfwAAA/gH8AAAH8B+AAAB/A/gAAAfwP4AAAD8D8AAAA/g/AAAAP4fwAAAB+H4AAAAfx+AAAAH8/gAAAA/PwAAAAPz8AAAAD+/AAAAAf/gAAAAH/4AAAAB/+AAAAAP/AAAAAD/wAAAAA/8AAAAAH+AAA=',
-  W: 'AAAAAAAD+AH8AP4/wD/gD+H8A/4A/h/AP+AfwfwD/gH8H+A/4B/A/gP/AfgP4H/wP4D+B/8D+A/gffA/gH8H3wPwB/B9+H8Afw/fh/AD8Pj4fwA/j4+H4AP4+Pz+AB+fj8/gAfn4/PwAH98Hz8AB/fB8/AAP3wffgAD98H/4AA//B/+AAP/gP/gAB/4D/wAAf+A/8AAH/gP/AAA/4D/wAAP8Af4AAD/AH+AAAfwB/gA=',
-  X: 'AH+AD+AAB/gB/gAAP8A/wAAD/AP8AAAf4H+AAAD+B/AAAA/w/wAAAH+P4AAAA/n8AAAAP9/AAAAB//gAAAAf/4AAAAD/8AAAAAf+AAAAAH/gAAAAA/wAAAAAP+AAAAAH/gAAAAD/8AAAAA//gAAAAf/4AAAAP//AAAAD+fwAAAB/n+AAAAfw/wAAAP8P8AAAH+B/gAAB/AP8AAA/wD/AAAf4Af4AAH+AH+AAD/AA/wA=',
-  Y: 'AAAAAAAAAAAAAAAAAAAAAAAP8AB/gAB/gA/wAAf4AP8AAD/AH+AAA/wB/gAAH+AfwAAA/gP8AAAP8D+AAAB/B/AAAAf4fwAAAD+P4AAAA/z+AAAAH9/AAAAB//wAAAAP/4AAAAB/+AAAAAf/AAAAAD/gAAAAA/4AAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAAAAB/AAAAAAfwAAAAAH8AAA=',
-  Z: 'AD///+AAA////gAAP///4AAD///+AAA////gAAH///4AAAAAP8AAAAAH+AAAAAD/gAAAAB/wAAAAAf4AAAAAP8AAAAAH+AAAAAD/gAAAAB/wAAAAAf4AAAAAP8AAAAAH/AAAAAD/gAAAAB/wAAAAAf4AAAAAP8AAAAAH+AAAAAD/gAAAAB/wAAAAAf4AAAAAP///4AAD///+AAA////gAAP///4AAD///+AAA////gA=',
-  0: 'AAACAAAAAAP+AAAAAH/4AAAAH//AAAAD//4AAAA///AAAAfwfwAAAH4D+AAAD+AfgAAA/AH8AAAPwA/AAAD8APwAAB/AD8AAAfgA/AAAH4APwAAB+AD8AAAfgA/AAAH4APwAAB+AD8AAAfwA/AAAD8APwAAA/AD8AAAPwB/AAAD+AfgAAAfgH4AAAH8D8AAAA/z/AAAAP//gAAAB//4AAAAP/8AAAAA/8AAAAAD4AAA=',
-  1: 'AAA/gAAAAA/8AAAAAf/AAAAAH/wAAAAB/8AAAAAP/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAA/AAAAAAPwAAAAAD8AAAAAB/AAAAAH//AAAAB//wAAAAf/8AAAAH//AAAAAAAAAA=',
-  2: 'AAA/wAAAAAf/AAAAAf/4AAAAP//AAAAD//4AAAB/D+AAAA/gfwAAAPwD8AAAD8A/AAAAGAPwAAAAAD8AAAAAB/AAAAAAfwAAAAAP4AAAAAH+AAAAAD/AAAAAB/gAAAAA/wAAAAA/4AAAAAf8AAAAAP8AAAAAH+AAAAAD/AAAAAB/gAAAAA/wD4AAAP4A+AAAH+APgAAB///4AAAf//+AAAH///gAAB///4AAAAAAAAA=',
-  3: 'AAAAAAAAAA/4AAAAA//gAAAAP/8AAAAH//AAAAH//8AAAB/B/AAAAfgPwAAADwB8AAAAAAfAAAAAAHwAAAAAB8AAAAAA/AAAAAAfgAAAAD/wAAAAA/4AAAAAP8AAAAAD/wAAAAAD/AAAAAAPwAAAAAB+AAAAAAfgAAAAAD4AAAAAB+AAAAYAfgAAA/AP4AAAP4H+AAAB/j/AAAAf//wAAAB//wAAAAP/4AAAAB/8AAA=',
-  4: 'AAAB+AAAAAA/wAAAAAf8AAAAAP/AAAAAH/wAAAAB/8AAAAA//AAAAAf/wAAAAPz8AAAAH4/AAAAB8PwAAAA+D8AAAAfA/AAAAPwPwAAAH4D8AAAD8A/AAAB+APwAAAfgD8AAAH///4AAB///+AAAf///gAAH///4AAB///+AAAf///gAAAAA/AAAAAAPwAAAAAH8AAAAAf/4AAAAH/+AAAAB//gAAAAf/4AAAAAAAAA=',
-  5: 'AAAAAAAAAAAAAAAAB//+AAAAf//gAAAH//4AAAB//+AAAAf//gAAAHwAAAAAB8AAAAAAfAAAAAAHwAAAAAB8AAAAAAfAAAAAAHz/AAAAB//4AAAAf//AAAAH//4AAAB///AAAAPgPwAAAAAB+AAAAAAfgAAAAAD4AAAAAA+AAAAAAPgAAAAAD4AAAAAB+AAAAAAfgAAAPgPwAAAH8P8AAAA//+AAAAH//AAAAA//gAA=',
-  6: 'AAAf4AAAAAf/gAAAAP/8AAAAH//gAAAD//4AAAA/j/AAAAfwfwAAAH4D8AAAB+AAAAAA/gAAAAAPwAAAAAD8fAAAAA/f+AAAAP//wAAAD//+AAAA///gAAAP+P8AAAD+B/AAAA/gP4AAAPwD+AAAD8AfgAAA/AP4AAAPwB+AAAD8A/gAAAfgP4AAAH4H8AAAA/j/AAAAP//gAAAB//4AAAAP/8AAAAB/+AAAAAH8AAA=',
-  7: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//+AAAH///gAAB///4AAAf//+AAAH///gAAB8AP4AAAfAD8AAAHwA/AAAB8AfwAAAAAH4AAAAAB8AAAAAA/AAAAAAfwAAAAAH4AAAAAD+AAAAAA/AAAAAAfwAAAAAH8AAAAAD+AAAAAA/AAAAAAfwAAAAAH4AAAAAB+AAAAAA/gAAAAAP4AAAAAH8AAAAAB/AAAAAA/gAAA=',
-  8: 'AAAAAAAAAAP/AAAAAP/8AAAAH//gAAAD//8AAAA/h/AAAAPwPwAAAH4B8AAAB+AfgAAAPgHwAAAD4B8AAAA+A/AAAAH8/gAAAA//wAAAAD/wAAAAD//AAAAB//4AAAA/z/AAAAPwPwAAAH4B+AAAB+AfgAAA/AD8AAAPwA/AAAD+AfwAAA/gH4AAAH4B+AAAB/A/gAAAP8/wAAAD//8AAAAf/+AAAAB/+AAAAAD+AAA=',
-  9: 'AAAAAAAAAAf4AAAAAf/gAAAAP/+AAAAH//wAAAD//8AAAA/g/gAAAfwH4AAAH4A/AAAB8AHwAAA/AB8AAAPwAfAAAD8AH4AAA/AB+AAAP4A/gAAB+Af4AAAfwP+AAAD///gAAAf//4AAAD//+AAAAf+fgAAAD+HwAAAAAB8AAAAAAfAAAAAAPwAAABgH4AAAB8D+AAAA/h/gAAAH//wAAAB//4AAAAP/8AAAAA/8AAA='
-} };
-
-// NYT Crossplay uses 100 physical tiles, including three blanks.
-const CROSSPLAY_TILE_VALUES = {
-  A:1, B:4, C:3, D:2, E:1, F:4, G:4, H:3, I:1, J:10, K:6, L:2, M:3,
-  N:1, O:1, P:3, Q:10, R:1, S:1, T:1, U:2, V:6, W:5, X:8, Y:4, Z:10
-};
-const CROSSPLAY_TILE_COUNTS = {
-  A:9, B:2, C:2, D:4, E:12, F:2, G:3, H:3, I:8, J:1, K:1, L:4, M:2,
-  N:5, O:8, P:2, Q:1, R:6, S:5, T:6, U:3, V:2, W:2, X:1, Y:2, Z:1,
-  '?':3
-};
-const CROSSPLAY_PREMIUM_COORDS = {
+const PREMIUM_COORDS = {
   '3L': 'A1 O1 G2 I2 F5 J5 E6 K6 B7 N7 B9 N9 E10 K10 F11 J11 G14 I14 A15 O15',
   '2L': 'H1 E3 K3 D4 L4 C5 M5 H6 A8 F8 J8 O8 H10 C11 M11 D12 L12 E13 K13 H15',
   '2W': 'B2 N2 H4 D8 L8 H12 B14 N14',
   '3W': 'D1 L1 A4 O4 A12 O12 D15 L15'
 };
-const CROSSPLAY_PREMIUMS = new Map();
-for (const [premium, coordinates] of Object.entries(CROSSPLAY_PREMIUM_COORDS)) {
-  for (const coordinate of coordinates.split(' ')) CROSSPLAY_PREMIUMS.set(coordinate, premium);
+const PREMIUMS = new Map();
+for (const [kind, coords] of Object.entries(PREMIUM_COORDS)) {
+  for (const coord of coords.split(' ')) PREMIUMS.set(coord, kind);
+}
+const COLUMNS = 'ABCDEFGHIJKLMNO';
+const MOVE_COUNT = 15;
+const SIMULATION_PLIES = 2;
+const SIMULATION_ITERATIONS = 277;
+const TERMINAL_BAG_LIMIT = 21;
+
+let games = [];
+let activeGameId = null;
+let currentReview = null;
+let currentTurnIndex = 0;
+let boardView = 'after';
+let trendResults = null;
+let trendRequestToken = 0;
+let wordFrequencyPromise = null;
+let quackleWorker = null;
+let workerReady = false;
+let workerPromise = null;
+let workerRequestId = 0;
+const workerRequests = new Map();
+
+const byId = id => document.getElementById(id);
+
+function makeElement(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
 }
 
-// Decode templates into binary masks + distance transforms (once)
-const GLYPH_TEMPLATE_MASKS = {};
-const GLYPH_TEMPLATE_DT = {};
-(function initGlyphTemplates() {
-  const H = GLYPH_TEMPLATES.H, W = GLYPH_TEMPLATES.W;
-  for (const ch of GLYPH_TEMPLATES.chars) {
-    const b64 = GLYPH_TEMPLATES.data[ch];
-    const bin = atob(b64);
-    const mask = new Uint8Array(H * W);
-    for (let i = 0; i < H * W; i++) {
-      const byte = bin.charCodeAt(i >> 3);
-      mask[i] = (byte >> (7 - (i & 7))) & 1;
-    }
-    GLYPH_TEMPLATE_MASKS[ch] = mask;
-    GLYPH_TEMPLATE_DT[ch] = edt(mask);
-  }
-})();
-
-// A second 4-glyph sample covers the larger post-game score font. Keeping
-// both variants avoids making the normal-screen template too broad.
-const HEADER_DIGIT_ALTERNATES = {
-  4: 'AAD//gAAAB//4AAAA/7+AAAAf8/gAAAP+P4AAAD/D+AAAB/g/gAAA/wP4AAAf4D+AAAP8A/gAAH/AP4AAD/gD+AAA/wA/gAAf4AP4AAH////4AB/////AAf////wAH////8AB/////AAf////wAH////8AAAAB/wAAAAAP4AAAAAD+AAAAAA/gAAAAAf4AAAAD//8AAAA///AAAAP//wAAAD//8AAAA///AAAAP//wA='
-};
-const HEADER_ALTERNATE_MASKS = {};
-const HEADER_ALTERNATE_DT = {};
-(function initHeaderAlternates() {
-  for (const [ch, b64] of Object.entries(HEADER_DIGIT_ALTERNATES)) {
-    const bin = atob(b64);
-    const mask = new Uint8Array(GLYPH_TEMPLATES.H * GLYPH_TEMPLATES.W);
-    for (let i = 0; i < mask.length; i++) {
-      const byte = bin.charCodeAt(i >> 3);
-      mask[i] = (byte >> (7 - (i & 7))) & 1;
-    }
-    HEADER_ALTERNATE_MASKS[ch] = mask;
-    HEADER_ALTERNATE_DT[ch] = edt(mask);
-  }
-})();
-
-// Euclidean distance transform (Felzenszwalb-Huttenlocher), flat output
-function edt(binary) {
-  const H = GLYPH_TEMPLATES.H, W = GLYPH_TEMPLATES.W;
-  const INF = 1e9;
-  const f = new Float64Array(H * W);
-  for (let i = 0; i < H * W; i++) f[i] = binary[i] ? 0 : INF;
-  for (let j = 0; j < W; j++) {
-    const v = [], z = new Array(H + 1), d = new Array(H + 1);
-    for (let i = 0; i < H; i++) v.push(f[i * W + j]);
-    let k = 0;
-    z[0] = -INF; z[1] = INF; d[0] = 0;
-    for (let q = 1; q < H; q++) {
-      let s = ((v[q] + q * q) - (v[d[k]] + d[k] * d[k])) / (2 * q - 2 * d[k]);
-      while (s <= z[k]) { k--; s = ((v[q] + q * q) - (v[d[k]] + d[k] * d[k])) / (2 * q - 2 * d[k]); }
-      k++; d[k] = q; z[k] = s; z[k + 1] = INF;
-    }
-    k = 0;
-    for (let q = 0; q < H; q++) {
-      while (z[k + 1] < q) k++;
-      f[q * W + j] = (q - d[k]) * (q - d[k]) + v[d[k]];
-    }
-  }
-  for (let i = 0; i < H; i++) {
-    const v = [], z = new Array(W + 1), d = new Array(W + 1);
-    for (let j = 0; j < W; j++) v.push(f[i * W + j]);
-    let k = 0;
-    z[0] = -INF; z[1] = INF; d[0] = 0;
-    for (let q = 1; q < W; q++) {
-      let s = ((v[q] + q * q) - (v[d[k]] + d[k] * d[k])) / (2 * q - 2 * d[k]);
-      while (s <= z[k]) { k--; s = ((v[q] + q * q) - (v[d[k]] + d[k] * d[k])) / (2 * q - 2 * d[k]); }
-      k++; d[k] = q; z[k] = s; z[k + 1] = INF;
-    }
-    k = 0;
-    for (let q = 0; q < W; q++) {
-      while (z[k + 1] < q) k++;
-      f[i * W + q] = (q - d[k]) * (q - d[k]) + v[d[k]];
-    }
-  }
-  return f;
+function setConnection(message, state = '') {
+  const node = byId('connectionState');
+  node.textContent = message;
+  node.className = 'account-state' + (state ? ' ' + state : '');
 }
 
-// Extract the letter glyph (largest white connected component) from a tile
-function extractGlyphMask(imageData, width, x1, y1, x2, y2) {
-  const m = 0.06;
-  const sx1 = Math.round(x1 + (x2 - x1) * m), sy1 = Math.round(y1 + (y2 - y1) * m);
-  const sx2 = Math.round(x1 + (x2 - x1) * (1 - m)), sy2 = Math.round(y1 + (y2 - y1) * (1 - m));
-  const gw = sx2 - sx1, gh = sy2 - sy1;
-  if (gw <= 0 || gh <= 0) return null;
-  const white = new Uint8Array(gw * gh);
-  for (let y = 0; y < gh; y++) {
-    for (let x = 0; x < gw; x++) {
-      const idx = ((sy1 + y) * width + (sx1 + x)) * 4;
-      if (imageData[idx] > 200 && imageData[idx+1] > 200 && imageData[idx+2] > 200) white[y * gw + x] = 1;
-    }
+async function api(path, options = {}) {
+  const response = await fetch('/api/crossplay/' + path, {
+    cache: 'no-store',
+    ...options,
+    headers: { ...(options.headers || {}) }
+  });
+  let data = {};
+  try { data = await response.json(); } catch (_) {}
+  if (!response.ok) throw new Error(data.error || ('Request failed (' + response.status + ')'));
+  return data;
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return 'Date unavailable';
+  const value = Number(timestamp);
+  const date = new Date(value < 100000000000 ? value * 1000 : value);
+  return Number.isNaN(date.getTime()) ? 'Date unavailable' :
+    date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function setGameMessage(message) {
+  byId('gameList').replaceChildren(makeElement('div', 'empty-state', message));
+}
+
+function updateAccountUi(username) {
+  setConnection(username ? 'Connected as ' + username : 'Connected to your NYT account', 'connected');
+  byId('forgetButton').classList.remove('hidden');
+  byId('refreshButton').disabled = false;
+  byId('saveCookieButton').textContent = 'Replace cookie';
+}
+
+function clearAccountUi(message) {
+  setConnection(message || 'Not connected', message && /could not|expired|error/i.test(message) ? 'error' : '');
+  byId('forgetButton').classList.add('hidden');
+  byId('refreshButton').disabled = true;
+  byId('saveCookieButton').textContent = 'Connect';
+  byId('gameCount').textContent = 'Connect to load your games';
+  games = [];
+  activeGameId = null;
+  currentReview = null;
+  byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'Choose a finished game to replay its turns.'));
+  setGameMessage('Connect your NYT account to load recent games.');
+}
+
+async function loadGames() {
+  byId('refreshButton').disabled = true;
+  byId('gameCount').textContent = 'Loading…';
+  setGameMessage('Loading recent games…');
+  try {
+    const data = await api('games');
+    games = Array.isArray(data.games) ? data.games : [];
+    renderGames();
+  } catch (error) {
+    byId('gameCount').textContent = 'Could not load games';
+    setGameMessage(error.message);
+    if (/cookie|session|logged in/i.test(error.message)) setConnection(error.message, 'error');
+  } finally {
+    byId('refreshButton').disabled = false;
   }
-  // Connected components (4-connectivity). Prefer the largest component that
-  // does not touch the crop edge, because a screen-edge tile can include a
-  // full-height white border with the same area as its letter.
-  const seen = new Uint8Array(gw * gh);
-  let best = null, bestSize = 0, fallback = null, fallbackSize = 0;
-  for (let i = 0; i < gw * gh; i++) {
-    if (!white[i] || seen[i]) continue;
-    const q = [i]; seen[i] = 1;
-    let minX = i % gw, maxX = i % gw, minY = (i / gw) | 0, maxY = (i / gw) | 0, size = 0;
-    while (q.length) {
-      const p = q.pop();
-      const px = p % gw, py = (p / gw) | 0;
-      size++;
-      if (px < minX) minX = px; if (px > maxX) maxX = px;
-      if (py < minY) minY = py; if (py > maxY) maxY = py;
-      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-        const nx = px + dx, ny = py + dy;
-        if (nx < 0 || nx >= gw || ny < 0 || ny >= gh) continue;
-        const np = ny * gw + nx;
-        if (white[np] && !seen[np]) { seen[np] = 1; q.push(np); }
+}
+
+function renderGames() {
+  const completed = games.filter(game => game.status === 'completed')
+    .sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+  const ongoing = games.length - completed.length;
+  byId('gameCount').textContent = completed.length + ' finished' +
+    (ongoing ? ' · ' + ongoing + ' in progress hidden' : '');
+  const list = byId('gameList');
+  list.replaceChildren();
+  if (!completed.length) {
+    setGameMessage(games.length ? 'There are no finished games in the recent games list yet.' :
+      'No recent Crossplay games were returned for this account.');
+    return;
+  }
+  for (const game of completed) {
+    const button = makeElement('button', 'game-card' + (game.id === activeGameId ? ' selected' : ''));
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Review game against ' + (game.opponent || 'opponent'));
+    const top = makeElement('span', 'game-card-top');
+    top.append(makeElement('span', '', game.opponent || 'Opponent'));
+    top.append(makeElement('span', '', String(game.my_score ?? '—') + '–' + String(game.opponent_score ?? '—')));
+    const bottom = makeElement('span', 'game-card-bottom');
+    bottom.append(makeElement('span', '', formatDate(game.timestamp)));
+    bottom.append(makeElement('span', '', (game.turn_count ?? '?') + ' turns'));
+    button.append(top, bottom);
+    button.addEventListener('click', () => openGame(game.id));
+    list.append(button);
+  }
+}
+
+async function openGame(gameId) {
+  trendRequestToken++;
+  trendResults = null;
+  boardView = 'after';
+  activeGameId = gameId;
+  renderGames();
+  currentReview = null;
+  byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'Loading game review…'));
+  try {
+    currentReview = await api('games/' + encodeURIComponent(gameId) + '/review');
+    currentTurnIndex = Math.max(0, currentReview.turns.length - 1);
+    renderGames();
+    renderReview();
+  } catch (error) {
+    byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', error.message));
+  }
+}
+
+function parsePlay(action) {
+  const parts = String(action || '').trim().split(/\s+/);
+  if (parts.length !== 3) return null;
+  const word = parts[0];
+  let row, col, dr, dc;
+  const across = parts[1].match(/^(\d{1,2})([A-O])$/);
+  const down = parts[1].match(/^([A-O])(\d{1,2})$/);
+  if (across) { row = Number(across[1]) - 1; col = COLUMNS.indexOf(across[2]); dr = 0; dc = 1; }
+  else if (down) { row = Number(down[2]) - 1; col = COLUMNS.indexOf(down[1]); dr = 1; dc = 0; }
+  else return null;
+  const placed = [];
+  let existing = false;
+  for (const ch of word) {
+    if (ch === '(') { existing = true; continue; }
+    if (ch === ')') { existing = false; continue; }
+    if (!/[A-Za-z]/.test(ch)) return null;
+    if (!existing) placed.push([row, col]);
+    row += dr;
+    col += dc;
+  }
+  return placed;
+}
+
+function renderBoard(grid, action) {
+  const marked = new Set((parsePlay(action) || []).map(([row, col]) => row + ',' + col));
+  const wrap = makeElement('div', 'board-scroll');
+  const table = makeElement('table', 'board');
+  const head = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headerRow.append(makeElement('th', '', ''));
+  for (const col of COLUMNS) headerRow.append(makeElement('th', '', col));
+  head.append(headerRow);
+  table.append(head);
+  const body = document.createElement('tbody');
+  for (let row = 0; row < 15; row++) {
+    const tr = document.createElement('tr');
+    tr.append(makeElement('th', '', row + 1));
+    const line = Array.isArray(grid) ? (grid[row] || '') : '';
+    for (let col = 0; col < 15; col++) {
+      const letter = line[col] || '.';
+      const position = COLUMNS[col] + (row + 1);
+      const premium = PREMIUMS.get(position);
+      const td = document.createElement('td');
+      if (letter !== '.') {
+        td.className = 'tile' + (letter === letter.toLowerCase() ? ' blank-tile' : '');
+        if (marked.has(row + ',' + col)) td.classList.add('last-play');
+        td.textContent = letter.toUpperCase();
+      } else {
+        td.className = premium ? 'premium-' + premium.toLowerCase() : 'empty';
+        if (marked.has(row + ',' + col)) td.classList.add('last-play');
+        td.textContent = premium || '';
       }
+      tr.append(td);
     }
-    const component = { minX, maxX, minY, maxY };
-    if (size > fallbackSize) { fallbackSize = size; fallback = component; }
-    const touchesEdge = minX === 0 || maxX === gw - 1 || minY === 0 || maxY === gh - 1;
-    if (!touchesEdge && size > bestSize) { bestSize = size; best = component; }
+    body.append(tr);
   }
-  // A real main glyph can touch the crop at this resolution. Use the interior
-  // component only when it is large enough to be the letter, not a superscript.
-  if (!best || bestSize < fallbackSize * 0.5) { best = fallback; bestSize = fallbackSize; }
-  if (!best || bestSize < 20) return null;
-  const mw = best.maxX - best.minX + 1, mh = best.maxY - best.minY + 1;
-  const mask = new Uint8Array(mw * mh);
-  for (let y = 0; y < mh; y++)
-    for (let x = 0; x < mw; x++)
-      mask[y * mw + x] = white[(best.minY + y) * gw + (best.minX + x)];
-  return { mask, w: mw, h: mh };
+  table.append(body);
+  wrap.append(table);
+  return wrap;
 }
 
-function resizeBilinear(mask, w, h, nw, nh) {
-  const out = new Uint8Array(nw * nh);
-  for (let y = 0; y < nh; y++) {
-    const sy = (y + 0.5) * h / nh - 0.5;
-    const y0 = Math.max(0, Math.floor(sy)), y1 = Math.min(h - 1, y0 + 1), fy = sy - y0;
-    for (let x = 0; x < nw; x++) {
-      const sx = (x + 0.5) * w / nw - 0.5;
-      const x0 = Math.max(0, Math.floor(sx)), x1 = Math.min(w - 1, x0 + 1), fx = sx - x0;
-      const v = (1-fy)*(1-fx)*mask[y0*w+x0] + (1-fy)*fx*mask[y0*w+x1] + fy*(1-fx)*mask[y1*w+x0] + fy*fx*mask[y1*w+x1];
-      out[y * nw + x] = v > 0.5 ? 1 : 0;
-    }
+function renderReview() {
+  if (!currentReview || !Array.isArray(currentReview.turns) || !currentReview.turns.length) {
+    byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'This game has no turns to review.'));
+    return;
   }
-  return out;
+  const review = currentReview;
+  const turn = review.turns[currentTurnIndex];
+  const root = byId('reviewPanel');
+  root.replaceChildren();
+  const header = makeElement('div', 'review-heading');
+  const title = document.createElement('div');
+  title.append(makeElement('h2', '', 'vs ' + (review.opponent || 'Opponent')));
+  title.append(makeElement('div', 'opponent-label', formatDate(review.timestamp) + ' · ' + review.turns.length + ' turns'));
+  header.append(title);
+  header.append(makeElement('div', 'scoreline', String(review.my_score ?? '—') + '  –  ' + String(review.opponent_score ?? '—')));
+  root.append(header);
+
+  const body = makeElement('div', 'review-body');
+  const turnPanel = makeElement('div', 'turn-panel');
+  const controls = makeElement('div', 'turn-controls');
+  const previous = makeElement('button', '', '← Previous');
+  previous.type = 'button';
+  previous.disabled = currentTurnIndex === 0;
+  previous.addEventListener('click', () => selectTurn(currentTurnIndex - 1));
+  const next = makeElement('button', '', 'Next →');
+  next.type = 'button';
+  next.disabled = currentTurnIndex >= review.turns.length - 1;
+  next.addEventListener('click', () => selectTurn(currentTurnIndex + 1));
+  const select = document.createElement('select');
+  select.setAttribute('aria-label', 'Select game turn');
+  review.turns.forEach((item, index) => {
+    const option = document.createElement('option');
+    option.value = index;
+    option.textContent = 'Turn ' + (index + 1) + ' · ' + (item.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent'));
+    option.selected = index === currentTurnIndex;
+    select.append(option);
+  });
+  select.addEventListener('change', () => selectTurn(Number(select.value)));
+  const boardToggle = makeElement('button', 'board-view-button', boardView === 'after' ? 'Show before move' : 'Show after move');
+  boardToggle.type = 'button';
+  boardToggle.addEventListener('click', () => {
+    boardView = boardView === 'after' ? 'before' : 'after';
+    renderReview();
+  });
+  controls.append(previous, select, next, boardToggle);
+  turnPanel.append(controls);
+
+  const actor = turn.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent');
+  const meta = makeElement('div', 'turn-meta');
+  const action = makeElement('div', 'turn-action', 'Turn ' + (currentTurnIndex + 1) + ' · ' + actor +
+    ' · ' + (turn.score >= 0 ? '+' : '') + turn.score);
+  meta.append(action);
+  const details = [turn.action || 'Pass'];
+  if (turn.rack) details.push('Rack ' + turn.rack);
+  details.push('Score before: ' + turn.mover_score + '–' + turn.other_score);
+  details.push('Bag: ' + turn.bag_count);
+  if (turn.swapped_tiles) details.push('Swapped: ' + turn.swapped_tiles);
+  meta.append(makeElement('div', 'turn-subtitle', details.join(' · ')));
+  turnPanel.append(meta);
+  const board = boardView === 'after' && Array.isArray(turn.grid_after) ? turn.grid_after : turn.grid;
+  turnPanel.append(renderBoard(board, turn.action));
+  turnPanel.append(makeElement('div', 'board-legend', (boardView === 'after' ? 'Board after this move.' : 'Board before this move.') + ' Gold outline marks newly placed tiles. Lowercase letters are assigned blanks.'));
+
+  const analysis = makeElement('section', 'panel analysis-panel');
+  analysis.append(makeElement('h3', '', 'Quackle analysis for this position'));
+  const analyzeButton = makeElement('button', 'analysis-button', 'Analyze this turn');
+  analyzeButton.type = 'button';
+  const status = makeElement('div', 'analysis-status', 'The engine loads when you first request an analysis.');
+  status.id = 'engineStatus';
+  const output = makeElement('div', '');
+  analyzeButton.addEventListener('click', () => analyzePosition(turn, analyzeButton, status, output));
+  analysis.append(analyzeButton, status, output);
+  turnPanel.append(analysis);
+  body.append(turnPanel);
+
+  const turnListPanel = makeElement('aside', 'panel turn-list-panel');
+  turnListPanel.append(makeElement('h3', '', 'Game turns'));
+  const turnList = makeElement('div', 'turn-list');
+  review.turns.forEach((item, index) => {
+    const row = makeElement('button', 'turn-row' + (item.mine ? ' mine' : '') + (index === currentTurnIndex ? ' selected' : ''));
+    row.type = 'button';
+    const player = makeElement('span', 'turn-player', (index + 1) + '. ' + (item.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent')));
+    const score = makeElement('span', 'turn-score', (item.action || 'Pass').split(' ').slice(0, 2).join(' ') + ' · +' + item.score);
+    row.append(player, score);
+    row.addEventListener('click', () => selectTurn(index));
+    turnList.append(row);
+  });
+  turnListPanel.append(turnList);
+  body.append(turnListPanel);
+  root.append(body);
+  root.append(makeTrendPanel(review));
 }
 
-// Normalize a glyph: bilinear resize to height H preserving aspect, center by COM
-function normalizeGlyph(mask, w, h) {
-  const H = GLYPH_TEMPLATES.H, W = GLYPH_TEMPLATES.W;
-  const scale = H / h;
-  const nh = H;
-  const nw = Math.max(1, Math.round(w * scale));
-  const g2 = resizeBilinear(mask, w, h, nw, nh);
-  const canvas = new Uint8Array(H * W);
-  let cx = 0, cy = 0, n = 0;
-  for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) if (g2[y * nw + x]) { cx += x; cy += y; n++; }
-  if (n === 0) return canvas;
-  cx = cx / n; cy = cy / n;
-  const ox = Math.round(W / 2 - cx), oy = Math.round(H / 2 - cy);
-  for (let y = 0; y < nh; y++) {
-    for (let x = 0; x < nw; x++) {
-      if (!g2[y * nw + x]) continue;
-      const px = x + ox, py = y + oy;
-      if (px >= 0 && px < W && py >= 0 && py < H) canvas[py * W + px] = 1;
-    }
-  }
-  return canvas;
+function selectTurn(index) {
+  if (!currentReview || index < 0 || index >= currentReview.turns.length) return;
+  currentTurnIndex = index;
+  renderReview();
+  const selected = byId('reviewPanel').querySelector('.turn-row.selected');
+  if (selected) selected.scrollIntoView({ block: 'nearest' });
 }
 
-function chamferDistance(a, dtA, b, dtB) {
-  const H = GLYPH_TEMPLATES.H, W = GLYPH_TEMPLATES.W;
-  let ca = 0, na = 0, cb = 0, nb = 0;
-  for (let i = 0; i < H * W; i++) {
-    if (b[i]) { ca += Math.sqrt(dtA[i]); na++; }
-    if (a[i]) { cb += Math.sqrt(dtB[i]); nb++; }
-  }
-  if (na === 0 || nb === 0) return Infinity;
-  return (ca / na + cb / nb) / 2;
+function svgElement(name, attrs = {}) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', name);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+  return node;
 }
 
-// Match a normalized glyph against the A-Z letter templates only (the
-// GLYPH_TEMPLATES set also carries 0-9 for header score OCR, but tile
-// letters must only ever match A-Z).
-const LETTER_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-function matchLetter(norm) {
-  const dtA = edt(norm);
-  let best = null, bestD = Infinity;
-  for (const ch of LETTER_CHARS) {
-    const d = chamferDistance(norm, dtA, GLYPH_TEMPLATE_MASKS[ch], GLYPH_TEMPLATE_DT[ch]);
-    if (d < bestD) { bestD = d; best = ch; }
+function makeTrendPanel(review) {
+  const panel = makeElement('section', 'panel trend-panel');
+  panel.append(makeElement('h3', '', 'Win chance through the game'));
+  const controls = makeElement('div', 'trend-controls');
+  const button = makeElement('button', 'analysis-button', trendResults && trendResults.state === 'running' ? 'Stop trend' :
+    (trendResults && trendResults.state === 'done' ? 'Rebuild win trend' : 'Build win trend'));
+  button.type = 'button';
+  button.addEventListener('click', () => {
+    if (trendResults && trendResults.state === 'running') {
+      trendRequestToken++;
+      trendResults = { ...trendResults, state: 'stopped', message: 'Trend stopped.' };
+      refreshTrendPanel();
+      return;
+    }
+    startWinTrend(review);
+  });
+  controls.append(button);
+  panel.append(controls);
+  const status = makeElement('div', 'trend-status', trendResults
+    ? trendResults.message || (trendResults.state === 'running' ? 'Preparing Quackle…' : '')
+    : 'Build an estimate for each turn using Quackle’s top-ranked move.');
+  status.id = 'trendStatus';
+  panel.append(status);
+  if (trendResults && trendResults.points && trendResults.points.length) {
+    const chart = makeElement('div', 'trend-chart');
+    chart.id = 'trendChart';
+    chart.append(drawTrendChart(trendResults.points, review.turns.length));
+    panel.append(chart);
+    const legend = makeElement('div', 'trend-legend');
+    const mine = makeElement('span');
+    const mineSwatch = makeElement('i', 'trend-swatch');
+    mineSwatch.style.background = '#72b7ff';
+    mine.append(mineSwatch, document.createTextNode(review.my_name || 'You'));
+    const theirs = makeElement('span');
+    const theirsSwatch = makeElement('i', 'trend-swatch');
+    theirsSwatch.style.background = '#ff9d9d';
+    theirs.append(theirsSwatch, document.createTextNode(review.opponent || 'Opponent'));
+    legend.append(mine, theirs);
+    panel.append(legend);
   }
-  return best;
+  panel.append(makeElement('p', 'analysis-note', 'Each estimate is taken at the start of the numbered turn and assumes that player chooses Quackle’s top-ranked move. The final point is the actual game result. Estimates use ' + TREND_ITERATIONS + ' samples; they are approximate and can vary between runs.'));
+  return panel;
 }
 
-// Read a tile's letter from the raw image data; returns a letter or null
-function readTileLetter(imageData, width, x1, y1, x2, y2) {
-  const g = extractGlyphMask(imageData, width, x1, y1, x2, y2);
-  if (!g) return null;
-  const norm = normalizeGlyph(g.mask, g.w, g.h);
-  const letter = matchLetter(norm);
-  // O and D are the closest template pair. Use their stable left-edge
-  // topology when Chamfer matching selects either one: D has a full-height
-  // left stem, while O curves away from its left edge.
-  if (letter === 'D' || letter === 'O') {
-    let occupied = 0;
-    for (let y = 0; y < g.h; y++) occupied += g.mask[y * g.w];
-    return occupied / g.h >= 0.75 ? 'D' : 'O';
-  }
-  if (letter === 'I' && g.w / g.h > 0.35) return 'J';
-  return letter;
+function refreshTrendPanel() {
+  const existing = byId('reviewPanel').querySelector('.trend-panel');
+  if (existing && currentReview) existing.replaceWith(makeTrendPanel(currentReview));
 }
 
-// Match a glyph mask against the digit templates used by header OCR.
-const DIGIT_CHARS = '0123456789';
-function matchGlyph(mask, w, h) {
-  const norm = normalizeGlyph(mask, w, h);
-  const dtA = edt(norm);
-  let best = null, bestD = Infinity;
-  for (const ch of DIGIT_CHARS) {
-    const d = chamferDistance(norm, dtA, GLYPH_TEMPLATE_MASKS[ch], GLYPH_TEMPLATE_DT[ch]);
-    if (d < bestD) { bestD = d; best = ch; }
+function drawTrendChart(points, totalTurns) {
+  const width = 760, height = 260;
+  const margin = { top: 16, right: 20, bottom: 37, left: 46 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const xMax = Math.max(1, totalTurns);
+  const x = value => margin.left + value / xMax * plotWidth;
+  const y = value => margin.top + (100 - value) / 100 * plotHeight;
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Estimated player win chance by completed turns' });
+
+  for (let value = 0; value <= 100; value += 25) {
+    const gridLine = svgElement('line', { x1: margin.left, x2: width - margin.right, y1: y(value), y2: y(value), stroke: '#34415a', 'stroke-width': 1 });
+    svg.append(gridLine);
+    const label = svgElement('text', { x: margin.left - 8, y: y(value) + 4, fill: '#9aa7bb', 'font-size': 11, 'text-anchor': 'end' });
+    label.textContent = value + '%';
+    svg.append(label);
   }
-  return best;
+  const tickCount = Math.min(5, xMax);
+  for (let i = 0; i <= tickCount; i++) {
+    const value = Math.round(xMax * i / tickCount);
+    const label = svgElement('text', { x: x(value), y: height - 10, fill: '#9aa7bb', 'font-size': 11, 'text-anchor': 'middle' });
+    label.textContent = String(value);
+    svg.append(label);
+  }
+  const xLabel = svgElement('text', { x: margin.left + plotWidth / 2, y: height - 1, fill: '#9aa7bb', 'font-size': 10, 'text-anchor': 'middle' });
+  xLabel.textContent = 'Moves completed';
+  svg.append(xLabel);
+
+  for (const [key, color] of [['mine', '#72b7ff'], ['theirs', '#ff9d9d']]) {
+    const values = points.map(point => `${x(point.x)},${y(point[key])}`).join(' ');
+    if (points.length > 1) svg.append(svgElement('polyline', { points: values, fill: 'none', stroke: color, 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    for (const point of points) {
+      svg.append(svgElement('circle', { cx: x(point.x), cy: y(point[key]), r: point.actual ? 4 : 2.5, fill: color, stroke: point.actual ? '#fff' : 'none', 'stroke-width': 1 }));
+    }
+  }
+  return svg;
 }
 
-// Extract connected components of dark pixels in a region (x0..x1, y0..y1).
-function extractDarkGlyphs(dark, width, x0, x1, y0, y1) {
-  const gw = x1 - x0, gh = y1 - y0;
-  if (gw <= 0 || gh <= 0) return [];
-  const seen = new Uint8Array(gw * gh);
-  const glyphs = [];
-  for (let i = 0; i < gw * gh; i++) {
-    const gx = i % gw, gy = (i / gw) | 0;
-    if (!dark[(y0 + gy) * width + (x0 + gx)] || seen[i]) continue;
-    const q = [i]; seen[i] = 1;
-    let minX = gx, maxX = gx, minY = gy, maxY = gy, size = 0;
-    while (q.length) {
-      const p = q.pop();
-      const px = p % gw, py = (p / gw) | 0;
-      size++;
-      if (px < minX) minX = px; if (px > maxX) maxX = px;
-      if (py < minY) minY = py; if (py > maxY) maxY = py;
-      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-        const nx = px + dx, ny = py + dy;
-        if (nx < 0 || nx >= gw || ny < 0 || ny >= gh) continue;
-        const np = ny * gw + nx;
-        if (!seen[np] && dark[(y0 + ny) * width + (x0 + nx)]) { seen[np] = 1; q.push(np); }
-      }
-    }
-    if (size > 40) {
-      const mw = maxX - minX + 1, mh = maxY - minY + 1;
-      const mask = new Uint8Array(mw * mh);
-      for (let yy = 0; yy < mh; yy++)
-        for (let xx = 0; xx < mw; xx++)
-          mask[yy * mw + xx] = dark[(y0 + minY + yy) * width + (x0 + minX + xx)] ? 1 : 0;
-      glyphs.push({ mask, w: mw, h: mh });
-    }
-  }
-  return glyphs;
-}
-
-// ── Deterministic header score OCR ───────────────────────────────────────
-// Scores use the same small dark glyphs on every Crossplay screenshot. Unlike
-// tile letters, score digits are sometimes touching (notably "10") and the
-// header also contains unrelated controls. The decoder therefore first finds
-// the upper score band of the score/name pair, then decodes each connected
-// column run independently. A weak final run is discarded so nearby UI icons
-// cannot become an extra digit.
-
-function matchGlyphDetailed(mask, w, h, chars = DIGIT_CHARS) {
-  const norm = normalizeGlyph(mask, w, h);
-  const dtA = edt(norm);
-  let best = null, bestD = Infinity;
-  for (const ch of chars) {
-    const d = chamferDistance(norm, dtA, GLYPH_TEMPLATE_MASKS[ch], GLYPH_TEMPLATE_DT[ch]);
-    if (d < bestD) { bestD = d; best = ch; }
-    if (HEADER_ALTERNATE_MASKS[ch]) {
-      const alternateD = chamferDistance(norm, dtA, HEADER_ALTERNATE_MASKS[ch], HEADER_ALTERNATE_DT[ch]);
-      if (alternateD < bestD) { bestD = alternateD; best = ch; }
-    }
-  }
-  return { ch: best, distance: bestD };
-}
-
-// Read the small point value in a tile's top-right corner. Blank tiles show
-// exactly "0". Natural J/Q/Z tiles show "10", so the complete value must be
-// decoded before blankness is assigned.
-function readTileValue(imageData, width, x1, y1, x2, y2, visibleLetter = null) {
-  const cellW = x2 - x1, cellH = y2 - y1;
-  const sx1 = Math.round(x1 + cellW * 0.48);
-  const sx2 = Math.round(x1 + cellW * 0.97);
-  const sy1 = Math.round(y1 + cellH * 0.01);
-  const sy2 = Math.round(y1 + cellH * 0.42);
-  const regionW = sx2 - sx1, regionH = sy2 - sy1;
-  if (regionW <= 0 || regionH <= 0) return null;
-
-  const white = new Uint8Array(regionW * regionH);
-  for (let y = 0; y < regionH; y++) {
-    for (let x = 0; x < regionW; x++) {
-      const i = ((sy1 + y) * width + sx1 + x) * 4;
-      const [, s, v] = rgbToHsv(imageData[i], imageData[i + 1], imageData[i + 2]);
-      // The looser saturation limit also reads the exact debug-overlay pixels.
-      if (v >= 200 && s <= 105) white[y * regionW + x] = 1;
-    }
-  }
-
-  const seen = new Uint8Array(regionW * regionH);
-  const glyphs = [];
-  let geometryValidComponents = 0;
-  const distanceLimit = cellH < 40 ? 0.70 : 0.40;
-  for (let i = 0; i < regionW * regionH; i++) {
-    if (!white[i] || seen[i]) continue;
-    const queue = [i];
-    seen[i] = 1;
-    let minX = i % regionW, maxX = i % regionW;
-    let minY = (i / regionW) | 0, maxY = (i / regionW) | 0, size = 0;
-    while (queue.length) {
-      const p = queue.pop();
-      const px = p % regionW, py = (p / regionW) | 0;
-      size++;
-      minX = Math.min(minX, px); maxX = Math.max(maxX, px);
-      minY = Math.min(minY, py); maxY = Math.max(maxY, py);
-      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-        const nx = px + dx, ny = py + dy;
-        if (nx < 0 || nx >= regionW || ny < 0 || ny >= regionH) continue;
-        const next = ny * regionW + nx;
-        if (white[next] && !seen[next]) { seen[next] = 1; queue.push(next); }
-      }
-    }
-
-    const glyphW = maxX - minX + 1, glyphH = maxY - minY + 1;
-    // The rounded right edge of a tile can enter this crop as a one-pixel
-    // vertical bar. It is not part of the point value.
-    if (glyphW === 1 && maxX === regionW - 1) continue;
-    if (size < 3 || minY > cellH * 0.22 ||
-        glyphH < cellH * 0.08 || glyphH > cellH * 0.32 ||
-        glyphW > cellW * 0.22) continue;
-    geometryValidComponents++;
-    const mask = new Uint8Array(glyphW * glyphH);
-    for (let y = 0; y < glyphH; y++) {
-      for (let x = 0; x < glyphW; x++) {
-        mask[y * glyphW + x] = white[(minY + y) * regionW + minX + x];
-      }
-    }
-    const hit = matchGlyphDetailed(mask, glyphW, glyphH);
-    if (hit.distance < distanceLimit) {
-      glyphs.push({ x: minX, ch: hit.ch, mask, w: glyphW, h: glyphH });
-    }
-  }
-
-  glyphs.sort((a, b) => a.x - b.x);
-  const naturalValue = CROSSPLAY_TILE_VALUES[(visibleLetter || '').toUpperCase()];
-  if (naturalValue) {
-    // The visible letter limits a physical tile to two valid scores: its
-    // natural Crossplay value or zero for an assigned blank. The score pixels,
-    // not the letter alone, decide which candidate is present.
-    if (geometryValidComponents !== glyphs.length) return null;
-    if (glyphs.length === 1) {
-      const zero = matchGlyphDetailed(glyphs[0].mask, glyphs[0].w, glyphs[0].h, '0');
-      if (naturalValue === 10) return zero.distance < distanceLimit ? 0 : null;
-      const natural = matchGlyphDetailed(
-        glyphs[0].mask, glyphs[0].w, glyphs[0].h, String(naturalValue));
-      const chosen = zero.distance < natural.distance ? zero : natural;
-      return chosen.distance < distanceLimit ? parseInt(chosen.ch, 10) : null;
-    }
-    if (glyphs.length === 2 && naturalValue === 10) {
-      const one = matchGlyphDetailed(glyphs[0].mask, glyphs[0].w, glyphs[0].h, '1');
-      const zero = matchGlyphDetailed(glyphs[1].mask, glyphs[1].w, glyphs[1].h, '0');
-      return Math.max(one.distance, zero.distance) < distanceLimit ? 10 : null;
-    }
-    return null;
-  }
-
-  const text = glyphs.map(glyph => glyph.ch).join('');
-  // Never turn a partially decoded multi-digit value such as 10 into a blank.
-  if (text === '0' && geometryValidComponents !== 1) return null;
-  return /^(?:0|[1-9]|10)$/.test(text) ? parseInt(text, 10) : null;
-}
-
-function cleanHeaderGlyph(mask, w, h) {
-  // A tall digit can leave a few antialiased pixels above a touching glyph.
-  // Remove only a sparse top fringe; never trim a narrow glyph such as "1".
-  const rows = [];
-  for (let y = 0; y < h; y++) {
-    let n = 0;
-    for (let x = 0; x < w; x++) n += mask[y * w + x];
-    if (n > 0) rows.push({ y, n });
-  }
-  if (!rows.length) return null;
-  let first = rows[0].y, last = rows[rows.length - 1].y;
-  const maxRow = Math.max(...rows.map(r => r.n));
-  while (last - first + 1 > 28 && w > 12) {
-    const row = rows.find(r => r.y === first);
-    if (!row || row.n >= maxRow * 0.45) break;
-    first++;
-  }
-  const outH = last - first + 1;
-  const out = new Uint8Array(w * outH);
-  for (let y = 0; y < outH; y++) {
-    for (let x = 0; x < w; x++) out[y * w + x] = mask[(first + y) * w + x];
-  }
-  return { mask: out, w, h: outH };
-}
-
-function decodeHeaderRun(dark, width, x0, x1, y0, y1) {
-  const runW = x1 - x0 + 1;
-  const runH = y1 - y0 + 1;
-  const raw = new Uint8Array(runW * runH);
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) raw[(y - y0) * runW + x - x0] = dark[y * width + x];
-  }
-
-  // A single digit can be as wide as 30 px on the post-game screen. Do not
-  // let the DP over-segment a wide 4/0 into two lower-scoring fragments.
-  const whole = cleanHeaderGlyph(raw, runW, y1 - y0 + 1);
-  const wholeHit = whole ? matchGlyphDetailed(whole.mask, whole.w, whole.h) : null;
-  // A narrow run can still contain touching digits (for example "15").
-  // Accept it as one digit only when the whole-glyph match is strong.
-  if (wholeHit && runW <= 35 && wholeHit.distance < 0.35) {
-    return { distance: wholeHit.distance, text: wholeHit.ch };
-  }
-
-  // Touching digits can form one column run. Prefer a real sparse bridge
-  // between glyphs over an arbitrary DP cut through a glyph. This keeps a
-  // touching "53" from becoming "63" when the 5/6 templates are close.
-  const columnInk = new Uint16Array(runW);
-  for (let x = 0; x < runW; x++) {
-    for (let y = 0; y < runH; y++) columnInk[x] += raw[y * runW + x];
-  }
-  const sparseLimit = Math.max(2, Math.round(runH * 0.10));
-  const peakFloor = Math.max(5, Math.round(runH * 0.25));
-  const sparseValleys = [];
-  let valleyStart = -1;
-  for (let x = 1; x < runW - 1; x++) {
-    if (columnInk[x] <= sparseLimit) {
-      if (valleyStart < 0) valleyStart = x;
-    } else if (valleyStart >= 0) {
-      sparseValleys.push([valleyStart, x - 1]);
-      valleyStart = -1;
-    }
-  }
-  if (valleyStart >= 0) sparseValleys.push([valleyStart, runW - 2]);
-
-  const decodeSlice = (start, end) => {
-    const glyphW = end - start;
-    if (glyphW < 5) return null;
-    const candidate = new Uint8Array(glyphW * runH);
-    for (let y = 0; y < runH; y++) {
-      for (let x = 0; x < glyphW; x++) candidate[y * glyphW + x] = raw[y * runW + start + x];
-    }
-    const cleaned = cleanHeaderGlyph(candidate, glyphW, runH);
-    return cleaned ? matchGlyphDetailed(cleaned.mask, cleaned.w, cleaned.h) : null;
-  };
-  const bridgeCandidates = [];
-  for (const [start, end] of sparseValleys) {
-    let leftPeak = 0, rightPeak = 0;
-    for (let x = Math.max(0, start - 5); x < start; x++) {
-      leftPeak = Math.max(leftPeak, columnInk[x]);
-    }
-    for (let x = end + 1; x <= Math.min(runW - 1, end + 5); x++) {
-      rightPeak = Math.max(rightPeak, columnInk[x]);
-    }
-    if (end - start + 1 > 3 || start < 5 || runW - end - 1 < 5 ||
-        leftPeak < peakFloor || rightPeak < peakFloor) continue;
-    const left = decodeSlice(0, start);
-    const right = decodeSlice(end + 1, runW);
-    if (left && right && left.distance < 0.35 && right.distance < 0.35) {
-      bridgeCandidates.push({
-        distance: left.distance + right.distance,
-        text: left.ch + right.ch
-      });
-    }
-  }
-
-  // Dynamic programming handles genuinely touching glyphs. Candidate widths
-  // are kept deliberately small: a normal header digit is 6–35 source pixels.
-  const dp = new Array(runW + 1).fill(null);
-  dp[0] = { distance: 0, text: '' };
-  for (let end = 1; end <= runW; end++) {
-    for (let glyphW = 5; glyphW <= 35 && glyphW <= end; glyphW++) {
-      const start = end - glyphW;
-      if (!dp[start]) continue;
-      const candidate = new Uint8Array(glyphW * (y1 - y0 + 1));
-      for (let y = 0; y <= y1 - y0; y++) {
-        for (let x = 0; x < glyphW; x++) candidate[y * glyphW + x] = raw[y * runW + start + x];
-      }
-      const cleaned = cleanHeaderGlyph(candidate, glyphW, y1 - y0 + 1);
-      if (!cleaned) continue;
-      const hit = matchGlyphDetailed(cleaned.mask, cleaned.w, cleaned.h);
-      const distance = dp[start].distance + hit.distance;
-      if (!dp[end] || distance < dp[end].distance) dp[end] = { distance, text: dp[start].text + hit.ch };
-    }
-  }
-  const decoded = dp[runW];
-  let baseline = decoded;
-  if (wholeHit && (!decoded || decoded.text.length < 2 || decoded.distance >= wholeHit.distance * 0.8)) {
-    baseline = { distance: wholeHit.distance, text: wholeHit.ch };
-  }
-  if (bridgeCandidates.length) {
-    bridgeCandidates.sort((a, b) => a.distance - b.distance);
-    if (!baseline || bridgeCandidates[0].distance < baseline.distance) return bridgeCandidates[0];
-  }
-  return baseline;
-}
-
-function findHeaderProjectionBands(imageData, width, height, gridTop) {
-  const top = Math.max(0, Math.floor(gridTop));
-  if (top < 80) return null;
-  const compactHeader = top < width * 0.55;
-  const left0 = Math.floor(width * 0.10), left1 = Math.floor(width * 0.35);
-  // In the compact layout, stop before the opponent avatar. Its dark outline
-  // can bridge the score and name lines into one false band.
-  const right0 = Math.floor(width * 0.65);
-  const right1 = Math.floor(width * (compactHeader ? 0.87 : 0.90));
-  const rowProj = new Uint16Array(top);
-  let maxRow = 0;
-  for (let y = 0; y < top; y++) {
-    let count = 0;
-    for (let x = left0; x < left1; x++) {
-      const i = (y * width + x) * 4;
-      if (Math.max(imageData[i], imageData[i + 1], imageData[i + 2]) < 190) count++;
-    }
-    for (let x = right0; x < right1; x++) {
-      const i = (y * width + x) * 4;
-      if (Math.max(imageData[i], imageData[i + 1], imageData[i + 2]) < 190) count++;
-    }
-    rowProj[y] = count;
-    if (count > maxRow) maxRow = count;
-  }
-  // A 15% density threshold keeps anti-aliased score strokes together
-  // without fragmenting the 9/3 glyphs on the regular screen.
-  const threshold = Math.max(12, maxRow * 0.15);
-  // Compact screenshots place scores above one quarter of the board-top
-  // coordinate. Other layouts keep the narrower established search region.
-  const minY = Math.floor(top * (compactHeader ? 0.15 : 0.25));
-  const bands = [];
-  let start = -1;
-  for (let y = minY; y < top; y++) {
-    if (rowProj[y] >= threshold) {
-      if (start < 0) start = y;
-    } else if (start >= 0) {
-      if (y - start >= 3) bands.push([start, y - 1]);
-      start = -1;
-    }
-  }
-  if (start >= 0 && top - start >= 3) bands.push([start, top - 1]);
-  const minBandHeight = Math.max(8, Math.round(width * 0.018));
-  const maxBandHeight = Math.max(50, Math.round(width * 0.065));
-  return { top, bands, minBandHeight, maxBandHeight };
-}
-
-function cropHeaderScoreBand(band, top, width, maxBandHeight) {
-  const bandH = band[1] - band[0] + 1;
-  const maxScoreLineHeight = Math.max(24, Math.round(width * 0.036));
-  const bandEnd = bandH > maxBandHeight
-    ? Math.min(top - 1, band[0] + maxScoreLineHeight)
-    : band[1];
-  const padding = Math.max(2, Math.round(width * 0.0025));
-  return [Math.max(0, band[0] - padding), Math.min(top - 1, bandEnd + padding)];
-}
-
-function findHeaderScoreBand(imageData, width, height, gridTop, projection = null) {
-  const info = projection || findHeaderProjectionBands(imageData, width, height, gridTop);
-  if (!info || !info.bands.length) return null;
-  const { top, bands, minBandHeight, maxBandHeight } = info;
-
-  // The score is the UPPER member of the adjacent score/name pair. The
-  // original scaffold selected the lower band, which is the player name
-  // ("You"/opponent) and explains the old 08/91188 readings.
-  for (let i = 0; i + 1 < bands.length; i++) {
-    const gap = bands[i + 1][0] - bands[i][1] - 1;
-    const upperH = bands[i][1] - bands[i][0] + 1;
-    const lowerH = bands[i + 1][1] - bands[i + 1][0] + 1;
-    if (gap >= 1 && gap <= 45 &&
-        upperH >= minBandHeight && upperH <= maxBandHeight &&
-        lowerH >= minBandHeight && lowerH <= maxBandHeight) {
-      return cropHeaderScoreBand(bands[i], top, width, maxBandHeight);
-    }
-  }
-  // Post-game headers can merge the score and name into one tall band. Ignore
-  // the status and result text above it and choose the last substantial band.
-  const band = [...bands].reverse().find(b => b[1] - b[0] + 1 >= minBandHeight)
-    || bands[bands.length - 1];
-  return cropHeaderScoreBand(band, top, width, maxBandHeight);
-}
-
-function decodeHeaderSideDetailed(dark, width, x0, x1, y0, y1) {
-  const colProj = new Uint16Array(x1 - x0);
-  for (let x = x0; x < x1; x++) {
-    let count = 0;
-    for (let y = y0; y <= y1; y++) count += dark[y * width + x];
-    colProj[x - x0] = count;
-  }
-  const runs = [];
-  let start = -1;
-  for (let x = 0; x < colProj.length; x++) {
-    if (colProj[x] > 0) {
-      if (start < 0) start = x;
-    } else if (start >= 0) {
-      runs.push([start, x - 1]);
-      start = -1;
-    }
-  }
-  if (start >= 0) runs.push([start, colProj.length - 1]);
-
-  // A difficulty label can precede the opponent score. Evaluate every
-  // compact digit sequence, then use the closest valid 1-3 digit match.
-  const candidates = [];
-  let current = null;
-  let previous = null;
-  const finish = () => {
-    if (current && (current.text === '0' || !current.text.startsWith('0'))) {
-      candidates.push(current);
-    }
-    current = null;
-  };
-  for (const [a, b] of runs) {
-    const gap = previous ? a - previous[1] - 1 : 0;
-    if (gap > 15) finish();
-    const decoded = decodeHeaderRun(dark, width, x0 + a, x0 + b, y0, y1);
-    const digitCount = decoded ? decoded.text.length : 0;
-    const averageDistance = decoded ? decoded.distance / Math.max(1, digitCount) : Infinity;
-    if (!decoded || averageDistance >= 0.35 || digitCount > 3) {
-      finish();
-    } else {
-      if (current && current.text.length + digitCount > 3) finish();
-      if (!current) current = { text: '', distance: 0, digits: 0 };
-      current.text += decoded.text;
-      current.distance += decoded.distance;
-      current.digits += digitCount;
-    }
-    previous = [a, b];
-  }
-  finish();
-  if (!candidates.length) return null;
-  candidates.sort((a, b) => a.distance / a.digits - b.distance / b.digits);
-  return {
-    text: candidates[0].text,
-    averageDistance: candidates[0].distance / candidates[0].digits
-  };
-}
-
-function decodeHeaderScoreBand(imageData, width, height, band) {
-  const dark = new Uint8Array(width * height);
-  for (let y = band[0]; y <= band[1]; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4;
-      if (Math.max(imageData[i], imageData[i + 1], imageData[i + 2]) < 190) dark[y * width + x] = 1;
-    }
-  }
-  const postGame = band[0] > height * 0.20;
-  const playerX0 = Math.floor(width * (postGame ? 0.20 : 0.14));
-  const playerX1 = Math.floor(width * (postGame ? 0.38 : 0.35));
-  const opponentX0 = Math.floor(width * (postGame ? 0.68 : 0.65));
-  const opponentX1 = Math.floor(width * (postGame ? 0.82 : 0.90));
-  return {
-    player: decodeHeaderSideDetailed(dark, width, playerX0, playerX1, band[0], band[1]),
-    opponent: decodeHeaderSideDetailed(dark, width, opponentX0, opponentX1, band[0], band[1])
-  };
-}
-
-function readHeaderScores(imageData, width, height, gridTop) {
-  const projection = findHeaderProjectionBands(imageData, width, height, gridTop);
-  if (!projection || !projection.bands.length) return { player: null, opponent: null };
-  const preferred = findHeaderScoreBand(imageData, width, height, gridTop, projection);
-  const candidates = [];
-  const seen = new Set();
-  const addCandidate = band => {
-    if (!band) return;
-    const key = band.join(':');
-    if (seen.has(key)) return;
-    seen.add(key);
-    candidates.push(band);
-  };
-  addCandidate(preferred);
-  for (const band of projection.bands) {
-    if (band[1] - band[0] + 1 >= projection.minBandHeight) {
-      addCandidate(cropHeaderScoreBand(
-        band, projection.top, width, projection.maxBandHeight));
-    }
-  }
-
-  let preferredResult = null;
-  const complete = [];
-  for (let i = 0; i < candidates.length; i++) {
-    const decoded = decodeHeaderScoreBand(imageData, width, height, candidates[i]);
-    const isComplete = decoded.player && decoded.opponent &&
-      /^\d{1,3}$/.test(decoded.player.text) && /^\d{1,3}$/.test(decoded.opponent.text);
-    if (i === 0) {
-      preferredResult = decoded;
-    }
-    if (isComplete) {
-      complete.push({
-        decoded,
-        averageDistance: (decoded.player.averageDistance + decoded.opponent.averageDistance) / 2
-      });
-    }
-  }
-  if (complete.length) {
-    complete.sort((a, b) => a.averageDistance - b.averageDistance);
-    return {
-      player: complete[0].decoded.player.text,
-      opponent: complete[0].decoded.opponent.text
-    };
-  }
-  return {
-    player: preferredResult?.player?.text || null,
-    opponent: preferredResult?.opponent?.text || null
-  };
-}
-
-function readBagCount(imageData, width, height, gridTop) {
-  // The live game header shows the bag count inside the large yellow badge at
-  // the horizontal center. The small yellow handle above it is a separate
-  // component, so select the largest matching component.
-  const x0 = Math.floor(width * 0.30), x1 = Math.ceil(width * 0.70);
-  const y0 = Math.max(0, Math.floor(gridTop * 0.25));
-  const y1 = Math.min(height, Math.ceil(gridTop * 0.70));
-  const regionW = x1 - x0, regionH = y1 - y0;
-  const yellow = new Uint8Array(regionW * regionH);
-  for (let y = 0; y < regionH; y++) {
-    for (let x = 0; x < regionW; x++) {
-      const i = ((y0 + y) * width + x0 + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[i], imageData[i + 1], imageData[i + 2]);
-      if (h >= 15 && h <= 38 && s >= 120 && v >= 180) yellow[y * regionW + x] = 1;
-    }
-  }
-
-  const seen = new Uint8Array(regionW * regionH);
-  let best = null, bestSize = 0;
-  for (let i = 0; i < yellow.length; i++) {
-    if (!yellow[i] || seen[i]) continue;
-    const queue = [i];
-    seen[i] = 1;
-    let minX = i % regionW, maxX = i % regionW;
-    let minY = (i / regionW) | 0, maxY = (i / regionW) | 0, size = 0;
-    while (queue.length) {
-      const p = queue.pop();
-      const px = p % regionW, py = (p / regionW) | 0;
-      size++;
-      minX = Math.min(minX, px); maxX = Math.max(maxX, px);
-      minY = Math.min(minY, py); maxY = Math.max(maxY, py);
-      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-        const nx = px + dx, ny = py + dy;
-        if (nx < 0 || nx >= regionW || ny < 0 || ny >= regionH) continue;
-        const next = ny * regionW + nx;
-        if (yellow[next] && !seen[next]) { seen[next] = 1; queue.push(next); }
-      }
-    }
-    if (size > bestSize) { bestSize = size; best = { minX, maxX, minY, maxY }; }
-  }
-  if (!best || bestSize < width * 0.20) return null;
-
-  const bx0 = x0 + best.minX, bx1 = x0 + best.maxX;
-  const by0 = y0 + best.minY, by1 = y0 + best.maxY;
-  const dark = new Uint8Array(width * height);
-  for (let y = by0; y <= by1; y++) {
-    for (let x = bx0; x <= bx1; x++) {
-      const i = (y * width + x) * 4;
-      if (Math.max(imageData[i], imageData[i + 1], imageData[i + 2]) < 190) {
-        dark[y * width + x] = 1;
-      }
-    }
-  }
-  const decoded = decodeHeaderSideDetailed(dark, width, bx0, bx1 + 1, by0, by1);
-  if (!decoded || decoded.averageDistance >= 0.35 || !/^\d{1,2}$/.test(decoded.text)) return null;
-  return parseInt(decoded.text, 10);
-}
-
-function readFinalTurnState(imageData, width, gridTop) {
-  // During the last Crossplay turn, the app shows an aligned navy "Last turn"
-  // label for the current player and a gray "Done" label for the opponent.
-  // Require both labels. A single or unclear label falls back to user input.
-  const y0 = Math.max(0, Math.floor(gridTop * 0.20));
-  const y1 = Math.max(y0, Math.ceil(gridTop * 0.60));
-  const findBanner = (x0, x1, kind) => {
-    const regionW = x1 - x0, regionH = y1 - y0;
-    const mask = new Uint8Array(regionW * regionH);
-    for (let y = 0; y < regionH; y++) {
-      for (let x = 0; x < regionW; x++) {
-        const i = ((y0 + y) * width + x0 + x) * 4;
-        const r = imageData[i], g = imageData[i + 1], b = imageData[i + 2];
-        const [h, s, v] = rgbToHsv(r, g, b);
-        const matches = kind === 'last-turn'
-          ? h >= 95 && h <= 120 && s >= 70 && v >= 45 && v <= 175
-          : s <= 18 && v >= 75 && v <= 190;
-        if (matches) mask[y * regionW + x] = 1;
-      }
-    }
-
-    const seen = new Uint8Array(mask.length);
-    const candidates = [];
-    for (let i = 0; i < mask.length; i++) {
-      if (!mask[i] || seen[i]) continue;
-      const queue = [i];
-      seen[i] = 1;
-      let minX = i % regionW, maxX = minX;
-      let minY = (i / regionW) | 0, maxY = minY, size = 0;
-      while (queue.length) {
-        const p = queue.pop();
-        const px = p % regionW, py = (p / regionW) | 0;
-        size++;
-        minX = Math.min(minX, px); maxX = Math.max(maxX, px);
-        minY = Math.min(minY, py); maxY = Math.max(maxY, py);
-        for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-          const nx = px + dx, ny = py + dy;
-          if (nx < 0 || nx >= regionW || ny < 0 || ny >= regionH) continue;
-          const next = ny * regionW + nx;
-          if (mask[next] && !seen[next]) { seen[next] = 1; queue.push(next); }
-        }
-      }
-      const bannerW = maxX - minX + 1, bannerH = maxY - minY + 1;
-      const fill = size / (bannerW * bannerH);
-      if (bannerW < width * 0.07 || bannerW > width * 0.24 ||
-          bannerH < width * 0.025 || bannerH > width * 0.08 ||
-          bannerW / bannerH < 1.75 || fill < 0.35) continue;
-      candidates.push({ x: x0 + minX, y: y0 + minY, width: bannerW, height: bannerH, size });
-    }
-    return candidates.length === 1 ? candidates[0] : null;
-  };
-
-  const player = findBanner(0, Math.ceil(width * 0.25), 'last-turn');
-  const opponent = findBanner(Math.floor(width * 0.75), width, 'done');
-  if (!player || !opponent) return null;
-  const playerCenterY = player.y + player.height / 2;
-  const opponentCenterY = opponent.y + opponent.height / 2;
-  if (Math.abs(playerCenterY - opponentCenterY) > width * 0.025) return null;
-  return {
-    player_label: 'Last turn',
-    opponent_label: 'Done',
-    final_turns_remaining: 1
-  };
-}
-
-// Detect whether each side's header score is "0". Kept as a compatibility
-// helper for callers that only need the zero flags.
-function detectHeaderZero(imageData, width, height, gridTop) {
-  const result = { playerZero: false, opponentZero: false };
-  const top = Math.max(0, Math.floor(gridTop));
-  if (top < 40) return result;
-
-  // Dark text mask (same threshold as the premium-label mask)
-  const dark = new Uint8Array(width * height);
-  for (let y = 0; y < top; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-      if (v < 190 && s > 30) dark[y * width + x] = 1;
-    }
-  }
-
-  // Regions: left (player) and right (opponent), excluding the central element
-  const regions = { player: [150, 400], opponent: [800, 1150] };
-
-  // Row profile of the combined regions above the board
-  const rowProj = new Float32Array(top);
-  for (let y = 0; y < top; y++) {
-    let c = 0;
-    for (const [rx0, rx1] of Object.values(regions)) {
-      for (let x = rx0; x < rx1; x++) c += dark[y * width + x];
-    }
-    rowProj[y] = c;
-  }
-
-  // Find bands (contiguous rows with dark content)
-  const bands = [];
-  let start = -1;
-  for (let y = 0; y < top; y++) {
-    if (rowProj[y] > 8) {
-      if (start < 0) start = y;
-    } else if (start >= 0) {
-      if (y - start >= 10) bands.push([start, y - 1]);
-      start = -1;
-    }
-  }
-  if (start >= 0 && top - start >= 10) bands.push([start, top - 1]);
-  if (bands.length < 2) return result;
-
-  // The score is the upper band and the name is the lower band. Check the
-  // upper band for a single "0" glyph.
-  for (let i = 0; i < bands.length - 1; i++) {
-    const [y0a, y1a] = bands[i];
-    const [y0b, y1b] = bands[i + 1];
-    for (const [side, [rx0, rx1]] of Object.entries(regions)) {
-      const upper = extractDarkGlyphs(dark, width, rx0, rx1, y0a, y1a);
-      if (upper.length !== 1) continue;
-      const ch = matchGlyph(upper[0].mask, upper[0].w, upper[0].h);
-      if (ch === '0') {
-        if (side === 'player') result.playerZero = true;
-        else result.opponentZero = true;
-      }
-    }
-  }
-  return result;
-}
-
-function detectBoardGridPrior(imageData, width, height) {
-  // Original heuristic fallback: width prior + anchor to expectedBoardTop.
-  // Kept as a safety net when premium anchors can't be found.
-  const BOARD_WIDTH_FRAC = 0.96;
-  const cellW = width * BOARD_WIDTH_FRAC / 15;
-  const cellH = cellW; // square cells
-  const gridLeft = (width - 15 * cellW) / 2;
-
-  const searchTop = Math.floor(height * 0.30);
-  const searchBottom = Math.floor(height * 0.70);
-
-  const yProfile = new Float32Array(searchBottom - searchTop);
-  for (let y = searchTop; y < searchBottom; y++) {
-    let blueCount = 0;
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-      if (h >= 95 && h <= 135 && s >= 80 && v >= 80) blueCount++;
-    }
-    yProfile[y - searchTop] = blueCount;
-  }
-
-  console.log(`Grid detection (prior fallback): cellW=${cellW.toFixed(1)}, gridLeft=${gridLeft.toFixed(1)}, boardWidth=${(15*cellW).toFixed(0)}px (${(BOARD_WIDTH_FRAC*100).toFixed(0)}%)`);
-
-  const tileRowThresh = width * 0.10;
-  let firstTileY = -1;
-  for (let i = 0; i < yProfile.length; i++) {
-    if (yProfile[i] > tileRowThresh) {
-      firstTileY = i + searchTop;
-      break;
-    }
-  }
-
-  if (firstTileY < 0) {
-    return fallbackGrid(width, height);
-  }
-
-  const expectedBoardTop = height * 0.29;
-  const gridTopMin = height * 0.10;
-  const gridTopMax = height * 0.40;
-  let bestGridTop = null;
-  let bestDist = Infinity;
-
-  for (let offset = 0; offset < 15; offset++) {
-    const gridTop = firstTileY - offset * cellH;
-    if (gridTop < gridTopMin || gridTop > gridTopMax) continue;
-    const dist = Math.abs(gridTop - expectedBoardTop);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestGridTop = gridTop;
-    }
-  }
-
-  if (bestGridTop === null) bestGridTop = expectedBoardTop;
-
-  const hGrid = [], vGrid = [];
-  for (let i = 0; i <= 15; i++) {
-    hGrid.push(Math.max(0, Math.min(height - 1, Math.round(bestGridTop + i * cellH))));
-    vGrid.push(Math.max(0, Math.min(width - 1, Math.round(gridLeft + i * cellW))));
-  }
-
-  return { hGrid, vGrid, cellW, cellH, method: 'prior' };
-}
-
-function fallbackGrid(w, h) {
-  const boardLeft = Math.round(w * 0.04);
-  const boardTop = Math.round(h * 0.28);
-  const cellW = (w * 0.92) / 15;
-  const cellH = ((h * 0.70 - h * 0.28)) / 15;
-  const hGrid = [], vGrid = [];
-  for (let i = 0; i <= 15; i++) {
-    hGrid.push(Math.round(boardTop + i * cellH));
-    vGrid.push(Math.round(boardLeft + i * cellW));
-  }
-  return { hGrid, vGrid, cellW, cellH, method: 'fallback' };
-}
-
-function isTileCell(imageData, width, x1, y1, x2, y2) {
-  // A tile = blue background + a large white letter in the center.
-  // Premium squares (e.g. dark-blue 3L) are also blue but only carry small
-  // white "3L"/"2W" text, so the white-letter check deterministically
-  // distinguishes tiles from premium squares even when their blues overlap.
-  // Thresholds may need tuning per theme — see the debug overlay.
-  const marginX = Math.max(2, Math.round((x2 - x1) * 0.08));
-  const marginY = Math.max(2, Math.round((y2 - y1) * 0.08));
-  const sx1 = x1 + marginX, sy1 = y1 + marginY;
-  const sx2 = x2 - marginX, sy2 = y2 - marginY;
-  if (sx2 <= sx1 || sy2 <= sy1) return false;
-
-  const cellW = sx2 - sx1;
-  const cellH = sy2 - sy1;
-  let blueCount = 0, totalCount = 0;
-
-  for (let y = sy1; y < sy2; y++) {
-    for (let x = sx1; x < sx2; x++) {
-      const idx = (y * width + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-      totalCount++;
-      // Broad blue: covers tile blue and premium blue
-      if (h >= 95 && h <= 135 && s >= 60 && v >= 60) blueCount++;
-    }
-  }
-
-  const blueRatio = blueCount / totalCount;
-  if (blueRatio <= 0.20) return false;
-  // Real tiles have a solid blue field. Current fixtures have at least 0.683
-  // blue coverage, while empty and premium cells stay below 0.184. This also
-  // accepts L, whose stem and baseline fall outside the center-only check.
-  if (blueRatio >= 0.50) return true;
-
-  // White letter in the center region (middle 50% of the cell). A tile's
-  // letter is large and tall; premium text ("3L") is small and short.
-  const cx1 = Math.round(sx1 + cellW * 0.25), cy1 = Math.round(sy1 + cellH * 0.25);
-  const cx2 = Math.round(sx1 + cellW * 0.75), cy2 = Math.round(sy1 + cellH * 0.75);
-  let centerWhite = 0, centerTotal = 0;
-  let whiteMinY = Infinity, whiteMaxY = -Infinity;
-  for (let y = cy1; y < cy2; y++) {
-    for (let x = cx1; x < cx2; x++) {
-      const idx = (y * width + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-      centerTotal++;
-      if (v >= 200 && s <= 80) {
-        centerWhite++;
-        if (y < whiteMinY) whiteMinY = y;
-        if (y > whiteMaxY) whiteMaxY = y;
-      }
-    }
-  }
-  if (centerTotal === 0) return false;
-  const whiteFrac = centerWhite / centerTotal;
-  if (whiteFrac < 0.04) return false;
-  const whiteSpan = (whiteMaxY - whiteMinY) / (cy2 - cy1);
-  if (whiteSpan < 0.5) return false;
-
+function validAnalysisTurn(turn) {
+  if (!turn || !/^[A-Z?]{1,7}$/.test(String(turn.rack || ''))) return false;
+  if (!Array.isArray(turn.grid) || turn.grid.length !== 15 ||
+      !turn.grid.every(row => typeof row === 'string' && /^[A-Za-z.]{15}$/.test(row))) return false;
+  const bag = Number(turn.bag_count);
+  if (!Number.isInteger(bag) || bag < 0) return false;
+  if (bag === 0 && ![1, 2].includes(Number(turn.final_turns_remaining))) return false;
   return true;
 }
 
-function buildTileMosaic(canvas, grid, tilePositions) {
-  // Build a labeled mosaic of all detected tiles
-  const cellSize = 100;
-  const labelHeight = 28;
-  const padding = 6;
-  const colsPerRow = 8;
-  const nTiles = tilePositions.length;
-  const nRows = Math.ceil(nTiles / colsPerRow);
+const TREND_ITERATIONS = 80;
 
-  const mosaicW = colsPerRow * (cellSize + padding) + padding;
-  const mosaicH = nRows * (cellSize + padding + labelHeight) + padding;
-
-  const mosaicCanvas = document.createElement('canvas');
-  mosaicCanvas.width = mosaicW;
-  mosaicCanvas.height = mosaicH;
-  const mctx = mosaicCanvas.getContext('2d');
-  mctx.fillStyle = '#000';
-  mctx.fillRect(0, 0, mosaicW, mosaicH);
-
-  for (let idx = 0; idx < nTiles; idx++) {
-    const { row, col, x1, y1, x2, y2 } = tilePositions[idx];
-    const gridR = Math.floor(idx / colsPerRow);
-    const gridC = idx % colsPerRow;
-    const dx = gridC * (cellSize + padding) + padding;
-    const dy = gridR * (cellSize + padding + labelHeight) + padding;
-
-    // Draw position label ABOVE the tile with contrast background
-    const label = `${row + 1}${String.fromCharCode(65 + col)}`;
-    mctx.fillStyle = '#222';
-    mctx.fillRect(dx, dy, cellSize, labelHeight);
-    mctx.fillStyle = '#ff0';
-    mctx.font = 'bold 18px monospace';
-    mctx.textAlign = 'center';
-    mctx.fillText(label, dx + cellSize / 2, dy + 20);
-    mctx.textAlign = 'left';
-
-    // Draw the cropped tile below the label
-    const srcW = x2 - x1, srcH = y2 - y1;
-    mctx.drawImage(canvas, x1, y1, srcW, srcH, dx, dy + labelHeight, cellSize, cellSize);
-
-    // Mask the superscript point value (small number in top-right corner of tile)
-    // Use a small rectangle to avoid covering the main letter
-    mctx.fillStyle = '#3a7abd'; // approximate Crossplay tile blue
-    mctx.fillRect(dx + cellSize * 0.65, dy + labelHeight, cellSize * 0.35, cellSize * 0.36);
-
-    // Draw thin border around the tile
-    mctx.strokeStyle = '#444';
-    mctx.lineWidth = 1;
-    mctx.strokeRect(dx, dy + labelHeight, cellSize, cellSize);
-  }
-
-  return mosaicCanvas;
-}
-
-async function detectRackTiles(canvas, imageData, width, height, gridBottom) {
-  // Detect rack tiles below the board
-  const cellHApprox = (gridBottom - height * 0.29) / 15;
-  const rackTop = Math.floor(gridBottom + cellHApprox * 0.5);
-  const rackBottom = Math.floor(height * 0.95);
-  if (rackBottom <= rackTop) return [];
-
-  const rackTiles = [];
-
-  // Find blue tile clusters in the rack region
-  // Scan for contiguous blue regions
-  const minTileSize = Math.floor(width / 30);
-  const maxTileSize = Math.floor(width / 6);
-
-  // Simple approach: scan columns for blue density
-  const colBlue = new Float32Array(width);
-  for (let x = 0; x < width; x++) {
-    let blueCount = 0;
-    for (let y = rackTop; y < rackBottom; y++) {
-      const idx = (y * width + x) * 4;
-      const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-      if (h >= 95 && h <= 140 && s >= 30 && v >= 50) blueCount++;
-    }
-    colBlue[x] = blueCount;
-  }
-
-  // Find runs of columns with significant blue
-  const threshold = (rackBottom - rackTop) * 0.15;
-  let inTile = false, tileStart = 0;
-  const tileRuns = [];
-  for (let x = 0; x < width; x++) {
-    if (colBlue[x] > threshold) {
-      if (!inTile) { inTile = true; tileStart = x; }
-    } else {
-      if (inTile) {
-        const w = x - tileStart;
-        if (w > minTileSize && w < maxTileSize) {
-          tileRuns.push({ x1: tileStart, x2: x });
-        }
-        inTile = false;
-      }
-    }
-  }
-  if (inTile) {
-    const w = width - tileStart;
-    if (w > minTileSize && w < maxTileSize) {
-      tileRuns.push({ x1: tileStart, x2: width });
-    }
-  }
-
-  // For each run, find vertical bounds
-  for (const run of tileRuns) {
-    let minY = rackBottom, maxY = rackTop;
-    for (let y = rackTop; y < rackBottom; y++) {
-      for (let x = run.x1; x < run.x2; x++) {
-        const idx = (y * width + x) * 4;
-        const [h, s, v] = rgbToHsv(imageData[idx], imageData[idx+1], imageData[idx+2]);
-        if (h >= 95 && h <= 140 && s >= 30 && v >= 50) {
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-    const h = maxY - minY;
-    if (h > minTileSize && h < maxTileSize) {
-      rackTiles.push({ x1: run.x1, y1: minY, x2: run.x2, y2: maxY + 1 });
-    }
-  }
-
-  return rackTiles;
-}
-
-async function analyzeOffline(imageSource) {
-  // imageSource: either { url: string } or { dataUrl: string }
-  // Returns parsed board object or null if detection fails
-
-  setStatus('Loading image for CV analysis...', 'loading');
-
-  // Step 1: Load image onto canvas
-  // For URL images, fetch as blob first to avoid CORS taint on canvas
-  let imgSrc;
-  if (imageSource.dataUrl) {
-    imgSrc = imageSource.dataUrl;
-  } else {
-    try {
-      const imgResp = await fetch(imageSource.url);
-      const blob = await imgResp.blob();
-      imgSrc = URL.createObjectURL(blob);
-    } catch (e) {
-      // CORS blocked — try with crossOrigin attribute as fallback
-      console.warn('Fetch failed, trying crossOrigin:', e.message);
-      imgSrc = imageSource.url;
-    }
-  }
-
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = imgSrc;
-  });
-
-  const cvCanvas = document.createElement('canvas');
-  cvCanvas.width = img.naturalWidth;
-  cvCanvas.height = img.naturalHeight;
-  const ctx = cvCanvas.getContext('2d');
-  ctx.drawImage(img, 0, 0);
-
-  const w = cvCanvas.width, h = cvCanvas.height;
-  let idata;
+async function startWinTrend(review) {
+  const token = ++trendRequestToken;
+  trendResults = { state: 'running', points: [], current: 0, message: 'Preparing Quackle…' };
+  refreshTrendPanel();
   try {
-    idata = ctx.getImageData(0, 0, w, h);
-  } catch (e) {
-    console.warn('getImageData failed (CORS tainted canvas):', e.message);
-    return null; // Fall back to full-board vision
-  }
-  const pixels = idata.data;
-
-  setStatus(`Image loaded (${w}x${h}). Detecting grid...`, 'loading');
-
-  // Step 2-3: Detect board grid
-  const grid = detectBoardGrid(pixels, w, h);
-  console.log('Grid detected:', grid);
-
-  // Step 4: Detect tiles in each cell
-  const tilePositions = [];
-  for (let row = 0; row < 15; row++) {
-    for (let col = 0; col < 15; col++) {
-      const y1 = grid.hGrid[row], y2 = grid.hGrid[row + 1];
-      const x1 = grid.vGrid[col], x2 = grid.vGrid[col + 1];
-      if (isTileCell(pixels, w, x1, y1, x2, y2)) {
-        tilePositions.push({ row, col, x1, y1, x2, y2 });
+    await loadQuackle();
+    const turns = review.turns;
+    for (let index = 0; index < turns.length; index++) {
+      if (token !== trendRequestToken || activeGameId !== review.id) return;
+      const turn = turns[index];
+      if (!validAnalysisTurn(turn)) throw new Error('Turn ' + (index + 1) + ' is missing a valid board, rack, or bag count.');
+      trendResults.message = 'Estimating turn ' + (index + 1) + ' of ' + turns.length + '…';
+      const status = byId('trendStatus');
+      if (status) status.textContent = trendResults.message;
+      const bagCount = Number(turn.bag_count);
+      const finalTurnsRemaining = bagCount === 0 ? Number(turn.final_turns_remaining) : 0;
+      const playToEnd = bagCount <= TERMINAL_BAG_LIMIT;
+      const result = await workerRequest('simulateKibitz', {
+        gridJson: JSON.stringify(turn.grid),
+        rack: String(turn.rack),
+        playerScore: Number(turn.mover_score) || 0,
+        opponentScore: Number(turn.other_score) || 0,
+        numMoves: 1,
+        iterations: TREND_ITERATIONS,
+        bagCount,
+        finalTurnsRemaining
+      });
+      if (token !== trendRequestToken || activeGameId !== review.id) return;
+      const best = result && Array.isArray(result.moves) ? result.moves[0] : null;
+      if (!result || result.simulated !== true || !best || !Number.isFinite(best.win) || best.win < 0 || best.win > 1 ||
+          result.playToEnd !== playToEnd || result.iterationsRequested !== TREND_ITERATIONS ||
+          result.iterationsCompleted !== TREND_ITERATIONS || result.candidateCount !== result.moves.length ||
+          result.totalPlayaheads !== result.iterationsCompleted * result.moves.length ||
+          best.samples !== TREND_ITERATIONS || (playToEnd && best.terminalSamples !== TREND_ITERATIONS)) {
+        throw new Error('Quackle returned no complete estimate for turn ' + (index + 1) + '.');
       }
+      const mine = turn.mine ? best.win * 100 : (1 - best.win) * 100;
+      trendResults.points.push({ x: index, mine, theirs: 100 - mine, turn: index + 1, actual: false });
+      trendResults.current = index + 1;
+      const chart = byId('trendChart');
+      if (chart) chart.replaceChildren(drawTrendChart(trendResults.points, turns.length));
     }
+    if (token !== trendRequestToken || activeGameId !== review.id) return;
+    const actual = Number(review.my_score) === Number(review.opponent_score)
+      ? 50
+      : (Number(review.my_score) > Number(review.opponent_score) ? 100 : 0);
+    trendResults.points.push({ x: turns.length, mine: actual, theirs: 100 - actual, actual: true });
+    trendResults.state = 'done';
+    trendResults.message = 'Win trend complete.';
+  } catch (error) {
+    if (token !== trendRequestToken) return;
+    trendResults.state = 'error';
+    trendResults.message = 'Could not build trend: ' + error.message;
   }
-
-  console.log(`Detected ${tilePositions.length} tiles on board`);
-
-  // Debug: draw grid overlay on image
-  const debugCanvas = document.getElementById('debugGridCanvas');
-  debugCanvas.width = w;
-  debugCanvas.height = h;
-  const dctx = debugCanvas.getContext('2d');
-  dctx.drawImage(cvCanvas, 0, 0);
-  // Draw grid lines
-  dctx.strokeStyle = 'rgba(0,255,0,0.5)';
-  dctx.lineWidth = 2;
-  for (let i = 0; i <= 15; i++) {
-    dctx.beginPath(); dctx.moveTo(grid.vGrid[0], grid.hGrid[i]); dctx.lineTo(grid.vGrid[15], grid.hGrid[i]); dctx.stroke();
-    dctx.beginPath(); dctx.moveTo(grid.vGrid[i], grid.hGrid[0]); dctx.lineTo(grid.vGrid[i], grid.hGrid[15]); dctx.stroke();
-  }
-  // Mark detected tiles
-  for (const tp of tilePositions) {
-    dctx.fillStyle = 'rgba(255,255,0,0.3)';
-    dctx.fillRect(tp.x1, tp.y1, tp.x2 - tp.x1, tp.y2 - tp.y1);
-  }
-  document.getElementById('debugSection').classList.remove('hidden');
-
-  let debugLog = `Image: ${w}x${h}\n`;
-  debugLog += `Grid method: ${grid.method || 'unknown'}\n`;
-  debugLog += `Grid: top=${grid.hGrid[0]} bottom=${grid.hGrid[15]} left=${grid.vGrid[0]} right=${grid.vGrid[15]}\n`;
-  debugLog += `Cell size: ${grid.cellW.toFixed(1)}x${grid.cellH.toFixed(1)} (${(15*grid.cellW/w*100).toFixed(1)}% of width)\n`;
-  debugLog += `Tiles detected: ${tilePositions.length}\n`;
-  debugLog += `Positions: ${tilePositions.map(t => `${t.row+1}${String.fromCharCode(65+t.col)}`).join(', ')}\n`;
-
-  if (tilePositions.length === 0) {
-    debugLog += 'No tiles detected.\n';
-    document.getElementById('debugLog').textContent = debugLog;
-    return null;
-  }
-
-  setStatus(`Found ${tilePositions.length} tiles. Building mosaic...`, 'loading');
-
-  // Step 5: Build labeled tile mosaic (board tiles)
-  const mosaicCanvas = buildTileMosaic(cvCanvas, grid, tilePositions);
-
-  // Also detect rack tiles
-  const rackTileBoxes = await detectRackTiles(cvCanvas, pixels, w, h, grid.hGrid[15]);
-  let rackMosaicCanvas = null;
-  if (rackTileBoxes.length > 0) {
-    const rackPositions = rackTileBoxes.map((box, i) => ({
-      row: -1, col: i, x1: box.x1, y1: box.y1, x2: box.x2, y2: box.y2
-    }));
-
-    // Build a separate rack mosaic with "R1", "R2" labels
-    const rCellSize = 100;
-    const rPad = 6;
-    const rLabelH = 28;
-    const rW = rackPositions.length * (rCellSize + rPad) + rPad;
-    const rH = rCellSize + rLabelH + rPad * 2;
-    rackMosaicCanvas = document.createElement('canvas');
-    rackMosaicCanvas.width = rW;
-    rackMosaicCanvas.height = rH;
-    const rctx = rackMosaicCanvas.getContext('2d');
-    rctx.fillStyle = '#000';
-    rctx.fillRect(0, 0, rW, rH);
-    for (let i = 0; i < rackPositions.length; i++) {
-      const rp = rackPositions[i];
-      const dx = i * (rCellSize + rPad) + rPad;
-      // Label above
-      rctx.fillStyle = '#222';
-      rctx.fillRect(dx, rPad, rCellSize, rLabelH);
-      rctx.fillStyle = '#ff0';
-      rctx.font = 'bold 18px monospace';
-      rctx.textAlign = 'center';
-      rctx.fillText(`R${i + 1}`, dx + rCellSize / 2, rPad + 20);
-      rctx.textAlign = 'left';
-      // Tile below
-      rctx.drawImage(cvCanvas, rp.x1, rp.y1, rp.x2 - rp.x1, rp.y2 - rp.y1, dx, rPad + rLabelH, rCellSize, rCellSize);
-      // Mask superscript point value (top-right corner of tile)
-      rctx.fillStyle = '#3a7abd';
-      rctx.fillRect(dx + rCellSize * 0.65, rPad + rLabelH, rCellSize * 0.35, rCellSize * 0.36);
-    }
-  }
-
-  // Step 6: Combine board + rack mosaics for the debug view
-  let combinedCanvas = mosaicCanvas;
-  if (rackMosaicCanvas) {
-    const cW = Math.max(mosaicCanvas.width, rackMosaicCanvas.width);
-    const cH = mosaicCanvas.height + 20 + rackMosaicCanvas.height;
-    combinedCanvas = document.createElement('canvas');
-    combinedCanvas.width = cW;
-    combinedCanvas.height = cH;
-    const cctx = combinedCanvas.getContext('2d');
-    cctx.fillStyle = '#000';
-    cctx.fillRect(0, 0, cW, cH);
-    cctx.drawImage(mosaicCanvas, 0, 0);
-    // Label
-    cctx.fillStyle = '#ff0';
-    cctx.font = 'bold 14px sans-serif';
-    cctx.fillText('RACK:', 2, mosaicCanvas.height + 14);
-    cctx.drawImage(rackMosaicCanvas, 0, mosaicCanvas.height + 20);
-  }
-
-  const mosaicDataUrl = combinedCanvas.toDataURL('image/png');
-
-  // Debug: show mosaic
-  document.getElementById('debugMosaicImg').src = mosaicDataUrl;
-
-  const boardPosLabels = tilePositions.map(t => `${t.row + 1}${String.fromCharCode(65 + t.col)}`);
-  const rackPosLabels = rackTileBoxes.map((_, i) => `R${i + 1}`);
-
-  debugLog += `Rack tiles detected: ${rackTileBoxes.length}\n`;
-  setStatus(`Reading ${tilePositions.length + rackTileBoxes.length} tile letters (deterministic OCR)...`, 'loading');
-
-  // Step 6b: Read each tile's main letter and point-value superscript from the
-  // raw pixels. A value of zero identifies a physical blank assigned to the
-  // visible main letter.
-  const letterMap = {};
-  const tileValueMap = {};
-  let unrecognized = 0;
-  let unrecognizedValues = 0;
-  for (const tp of tilePositions) {
-    const label = `${tp.row + 1}${String.fromCharCode(65 + tp.col)}`;
-    const letter = readTileLetter(pixels, w, tp.x1, tp.y1, tp.x2, tp.y2);
-    const value = readTileValue(pixels, w, tp.x1, tp.y1, tp.x2, tp.y2, letter);
-    letterMap[label] = letter || '?';
-    tileValueMap[label] = value;
-    if (!letter) unrecognized++;
-    if (value === null) unrecognizedValues++;
-  }
-  for (let i = 0; i < rackTileBoxes.length; i++) {
-    const box = rackTileBoxes[i];
-    const letter = readTileLetter(pixels, w, box.x1, box.y1, box.x2, box.y2);
-    const value = readTileValue(pixels, w, box.x1, box.y1, box.x2, box.y2, letter);
-    letterMap[`R${i + 1}`] = letter || '?';
-    tileValueMap[`R${i + 1}`] = value;
-    // A rack blank has no assigned main letter, so its zero value is enough.
-    if (!letter && value !== 0) unrecognized++;
-    if (value === null) unrecognizedValues++;
-  }
-
-  debugLog += `Deterministic OCR: ${tilePositions.length + rackTileBoxes.length} tiles read, ${unrecognized} unrecognized.\n`;
-  document.getElementById('debugLog').textContent = debugLog;
-
-  // Step 7: Assemble grid
-  const boardGrid = Array(15).fill(null).map(() => '.'.repeat(15).split(''));
-  let missedTiles = 0;
-
-  for (const tp of tilePositions) {
-    const label = `${tp.row + 1}${String.fromCharCode(65 + tp.col)}`;
-    const letter = letterMap[label];
-    if (letter && letter.length === 1 && /[A-Za-z]/.test(letter)) {
-      boardGrid[tp.row][tp.col] = tileValueMap[label] === 0
-        ? letter.toLowerCase()
-        : letter.toUpperCase();
-    } else {
-      boardGrid[tp.row][tp.col] = '?';
-      missedTiles++;
-    }
-  }
-
-  // Build rack string
-  let rack = '';
-  for (let i = 0; i < rackTileBoxes.length; i++) {
-    const label = `R${i + 1}`;
-    const letter = letterMap[label];
-    if (tileValueMap[label] === 0) {
-      rack += '?';
-    } else if (letter && letter.length === 1 && /[A-Za-z]/.test(letter)) {
-      rack += letter.toUpperCase();
-    } else {
-      rack += '?';
-    }
-  }
-
-  const gridStrings = boardGrid.map(row => row.join(''));
-  const blankPositions = [];
-  for (const tp of tilePositions) {
-    const label = `${tp.row + 1}${String.fromCharCode(65 + tp.col)}`;
-    if (tileValueMap[label] === 0) blankPositions.push(label);
-  }
-  debugLog += `Tile value OCR: ${unrecognizedValues} unrecognized; blanks: ${blankPositions.join(', ') || 'none'}.\n`;
-
-  // Step 7b: Read the two dark score bands above the board using fully
-  // local/deterministic OCR. A null score means the screenshot did not
-  // expose a usable score band.
-  const headerScores = readHeaderScores(pixels, w, h, grid.hGrid[0]);
-  const playerScore = headerScores.player && /^\d+$/.test(headerScores.player)
-    ? parseInt(headerScores.player, 10) : null;
-  const opponentScore = headerScores.opponent && /^\d+$/.test(headerScores.opponent)
-    ? parseInt(headerScores.opponent, 10) : null;
-  const bagCount = readBagCount(pixels, w, h, grid.hGrid[0]);
-  const finalTurnState = bagCount === 0
-    ? readFinalTurnState(pixels, w, grid.hGrid[0])
-    : null;
-  debugLog += `Header score OCR: ${headerScores.player || '?'} vs ${headerScores.opponent || '?'}\n`;
-  debugLog += `Bag count OCR: ${bagCount ?? '?'}\n`;
-  debugLog += `Final-turn OCR: ${finalTurnState
-    ? `${finalTurnState.player_label} / ${finalTurnState.opponent_label}`
-    : 'not detected'}\n`;
-  document.getElementById('debugLog').textContent = debugLog;
-
-  const valueStatus = unrecognizedValues
-    ? `, ${unrecognizedValues} unreadable tile values`
-    : '';
-  setStatus(`Offline parsing complete: ${tilePositions.length} tiles, ${missedTiles} unrecognized${valueStatus}.`, 'done');
-
-  return {
-    grid: gridStrings,
-    rack,
-    blank_positions: blankPositions,
-    tile_values_complete: unrecognizedValues === 0,
-    player_score: playerScore,
-    opponent_score: opponentScore,
-    bag_count: bagCount,
-    final_turns_remaining: finalTurnState?.final_turns_remaining ?? null,
-    final_turn_labels: finalTurnState
-      ? [finalTurnState.player_label, finalTurnState.opponent_label]
-      : [],
-    player_name: 'You',
-    opponent_name: 'Opponent'
-  };
+  refreshTrendPanel();
 }
 
-// ── Analyze (fully deterministic — no API key) ──────────────────────────
-async function analyze() {
-  const imageUrl = document.getElementById('imageUrlInput').value.trim();
-  if (!imageUrl && !base64Image) { setStatus('Provide an image URL or drop an image.', 'error'); return; }
-
-  cancelQuackleRun('Analyzing a new board...');
-  const movesContainer = document.getElementById('movesContainer');
-  movesContainer.classList.add('hidden');
-  movesContainer.innerHTML = '';
-  document.getElementById('kibitzBtn').classList.add('hidden');
-  lastParsed = null;
-
-  const btn = document.getElementById('analyzeBtn');
-  btn.disabled = true;
-
-  try {
-    const imageSource = base64Image
-      ? { dataUrl: `data:${base64Image.media_type};base64,${base64Image.data}` }
-      : { url: imageUrl };
-
-    let parsed = null;
-    try {
-      parsed = await analyzeOffline(imageSource);
-    } catch (e) {
-      console.warn('Offline parsing failed:', e.message);
-    }
-
-    if (parsed) {
-      renderResult(parsed);
-      return;
-    }
-
-    setStatus('Could not parse the board from this image.', 'error');
-  } catch (e) {
-    setStatus('Error: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-
-
-
-// ── Parse & render ────────────────────────────────────────────────────────
-function calculateUnseenTiles(grid, rack) {
-  if (!Array.isArray(grid) || grid.length !== 15 || !/^[A-Z?]{1,7}$/.test(rack || '')) {
-    return null;
-  }
-  const remaining = { ...CROSSPLAY_TILE_COUNTS };
-  const remove = tile => {
-    if (!(tile in remaining) || remaining[tile] <= 0) return false;
-    remaining[tile]--;
-    return true;
-  };
-  for (const row of grid) {
-    if (typeof row !== 'string' || row.length !== 15) return null;
-    for (const cell of row) {
-      if (cell === '.') continue;
-      if (cell === '?') return null;
-      const physicalTile = cell >= 'a' && cell <= 'z' ? '?' : cell.toUpperCase();
-      if (!remove(physicalTile)) return null;
-    }
-  }
-  for (const tile of rack) if (!remove(tile)) return null;
-  return remaining;
-}
-
-function renderTilePool(parsed) {
-  const container = document.getElementById('tilePool');
-  const remaining = calculateUnseenTiles(parsed.grid, parsed.rack);
-  if (!remaining) {
-    container.classList.add('hidden');
-    return;
-  }
-  const unseenCount = Object.values(remaining).reduce((sum, count) => sum + count, 0);
-  const bagCount = Number.isInteger(parsed.bag_count) ? parsed.bag_count : null;
-  const opponentCount = bagCount !== null && bagCount <= unseenCount
-    ? unseenCount - bagCount
-    : null;
-  const summary = [
-    `Bag ${bagCount ?? '--'}`,
-    opponentCount === null ? 'Opponent rack hidden' : `Opponent rack ${opponentCount} hidden`,
-    `Unseen ${unseenCount}`
-  ];
-  document.getElementById('tilePoolSummary').textContent = summary.join(' | ');
-
-  const chips = [];
-  for (const tile of [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '?']) {
-    const count = remaining[tile];
-    if (!count) continue;
-    const label = tile === '?' ? 'Blank' : tile;
-    chips.push(`<span class="tile-chip" data-tile="${tile}" data-count="${count}">${label}${count > 1 ? `×${count}` : ''}</span>`);
-  }
-  document.getElementById('unseenTiles').innerHTML = chips.join('');
-  container.classList.remove('hidden');
-}
-
-function renderResult(parsed) {
-  cancelQuackleRun('Board ready. Run Quackle to estimate win percentages.');
-  const movesContainer = document.getElementById('movesContainer');
-  movesContainer.classList.add('hidden');
-  movesContainer.innerHTML = '';
-
-  // Build tile list from grid
-  const grid = parsed.grid || [];
-  const tiles = [];
-  const cols = 'ABCDEFGHIJKLMNO';
-  for (let r = 0; r < grid.length && r < 15; r++) {
-    const line = grid[r] || '';
-    for (let c = 0; c < 15 && c < line.length; c++) {
-      const ch = line[c];
-      if (ch !== '.') {
-        tiles.push({ letter: ch.toUpperCase(), row: r, col: c, blank: ch === ch.toLowerCase() && ch !== ch.toUpperCase() });
-      }
-    }
-  }
-
-  // Stats
-  document.getElementById('p1Score').textContent = parsed.player_score ?? '--';
-  document.getElementById('p1Name').textContent = parsed.player_name || 'Player 1';
-  document.getElementById('p2Score').textContent = parsed.opponent_score ?? '--';
-  document.getElementById('p2Name').textContent = parsed.opponent_name || 'Player 2';
-  document.getElementById('rackDisplay').textContent = parsed.rack || '--';
-  document.getElementById('tileCount').textContent = tiles.length;
-  document.getElementById('bagCount').textContent = parsed.bag_count ?? '--';
-  document.getElementById('statsRow').classList.remove('hidden');
-  renderTilePool(parsed);
-
-  // Board table
-  const board = [];
-  for (let r = 0; r < 15; r++) board.push(new Array(15).fill(null));
-  for (const t of tiles) board[t.row][t.col] = t;
-
-  let html = '<table class="board"><tr><th></th>';
-  for (const c of cols) html += `<th>${c}</th>`;
-  html += '</tr>';
-  for (let r = 0; r < 15; r++) {
-    html += `<tr><th>${r + 1}</th>`;
-    for (let c = 0; c < 15; c++) {
-      const t = board[r][c];
-      const position = `${cols[c]}${r + 1}`;
-      if (t) {
-        const cls = t.blank ? 'blank-tile' : 'tile';
-        html += `<td class="${cls}" data-position="${position}">${t.letter}</td>`;
-      } else {
-        const premium = CROSSPLAY_PREMIUMS.get(position);
-        const premiumClass = premium ? ` premium-${premium.toLowerCase()}` : '';
-        const premiumAttribute = premium ? ` data-premium="${premium}"` : '';
-        html += `<td class="empty${premiumClass}" data-position="${position}"${premiumAttribute}>${premium || ''}</td>`;
-      }
-    }
-    html += '</tr>';
-  }
-  html += '</table>';
-  document.getElementById('boardContainer').innerHTML = html;
-
-  // Find words
-  const words = [];
-  const g = [];
-  for (let r = 0; r < 15; r++) {
-    g.push([]);
-    for (let c = 0; c < 15; c++) g[r].push(board[r][c] ? board[r][c].letter : '.');
-  }
-
-  // Across
-  for (let r = 0; r < 15; r++) {
-    let c = 0;
-    while (c < 15) {
-      if (g[r][c] !== '.') {
-        const s = c; let w = '';
-        while (c < 15 && g[r][c] !== '.') { w += g[r][c]; c++; }
-        if (w.length >= 2) words.push({ pos: `${r+1}${cols[s]}`, word: w, dir: 'across' });
-      } else c++;
-    }
-  }
-  // Down
-  for (let c = 0; c < 15; c++) {
-    let r = 0;
-    while (r < 15) {
-      if (g[r][c] !== '.') {
-        const s = r; let w = '';
-        while (r < 15 && g[r][c] !== '.') { w += g[r][c]; r++; }
-        if (w.length >= 2) words.push({ pos: `${cols[c]}${s+1}`, word: w, dir: 'down' });
-      } else r++;
-    }
-  }
-
-  let whtml = `<h3>Words Found (${words.length})</h3><div class="word-list"><table><tr><th>Pos</th><th>Word</th><th>Dir</th></tr>`;
-  for (const w of words) whtml += `<tr><td>${w.pos}</td><td><b>${w.word}</b></td><td>${w.dir}</td></tr>`;
-  whtml += '</table></div>';
-  document.getElementById('wordsContainer').innerHTML = whtml;
-  document.getElementById('contentRow').classList.remove('hidden');
-
-  document.getElementById('kibitzBtn').classList.add('hidden');
-  document.getElementById('kibitzBtn').disabled = false;
-  document.getElementById('finalTurnPanel').classList.add('hidden');
-  for (const input of document.querySelectorAll('input[name="finalTurnState"]')) input.checked = false;
-  selectedFinalTurns = null;
-  lastParsed = null;
-  if (parsed.tile_values_complete === false) {
-    document.getElementById('engineStatus').textContent =
-      'Tile values are incomplete. Quackle is disabled to avoid incorrect blank usage.';
-  } else if (/^[A-Z?]{1,7}$/.test(parsed.rack || '') && Number.isInteger(parsed.bag_count)) {
-    document.getElementById('kibitzBtn').classList.remove('hidden');
-    lastParsed = parsed;
-    if (parsed.bag_count === 0) {
-      if (parsed.final_turns_remaining === 1 || parsed.final_turns_remaining === 2) {
-        selectedFinalTurns = parsed.final_turns_remaining;
-        const observedInput = document.querySelector(
-          `input[name="finalTurnState"][value="${selectedFinalTurns}"]`);
-        if (observedInput) observedInput.checked = true;
-        document.getElementById('engineStatus').textContent =
-          `Detected ${parsed.final_turn_labels?.join(' / ') || 'the final-turn labels'}: ` +
-          `${selectedFinalTurns} Crossplay final ${selectedFinalTurns === 1 ? 'turn remains' : 'turns remain'}.`;
-      } else {
-        document.getElementById('finalTurnPanel').classList.remove('hidden');
-        document.getElementById('kibitzBtn').disabled = true;
-        document.getElementById('engineStatus').textContent =
-          'Choose the Crossplay final-turn state before running Quackle.';
-      }
-    } else {
-      selectedFinalTurns = 0;
-    }
-  } else if (/^[A-Z?]{1,7}$/.test(parsed.rack || '')) {
-    document.getElementById('engineStatus').textContent =
-      'The tile bag count is missing. Quackle is disabled to avoid an invalid game state.';
-  }
-}
-
-// ── Quackle WASM Engine ─────────────────────────────────────────────────
-const QUACKLE_MOVE_COUNT = 15;
-const QUACKLE_SIMULATION_PLIES = 2;
-const QUACKLE_SIMULATION_ITERATIONS = 277;
-// Candidate plus two future moves can draw at most three full racks.
-const QUACKLE_TERMINAL_BAG_LIMIT = 21;
-let quackleWorker = null;
-let quackleReady = false;
-let quackleBusy = false;
-let quackleRequestId = 0;
-let quackleRunToken = 0;
-const quackleRequests = new Map();
-let lastParsed = null;
-let selectedFinalTurns = null;
-
-for (const input of document.querySelectorAll('input[name="finalTurnState"]')) {
-  input.addEventListener('change', event => {
-    selectedFinalTurns = Number.parseInt(event.target.value, 10);
-    const button = document.getElementById('kibitzBtn');
-    button.disabled = false;
-    document.getElementById('engineStatus').textContent =
-      `${selectedFinalTurns} Crossplay final ${selectedFinalTurns === 1 ? 'turn remains' : 'turns remain'}.`;
-  });
-}
-
-function resetQuackleWorker(reason = 'Quackle worker stopped') {
-  if (quackleWorker) quackleWorker.terminate();
-  quackleWorker = null;
-  quackleReady = false;
-  for (const request of quackleRequests.values()) {
-    clearTimeout(request.timeoutId);
-    request.reject(new Error(reason));
-  }
-  quackleRequests.clear();
-}
-
-function cancelQuackleRun(status = '') {
-  quackleRunToken++;
-  if (quackleBusy) resetQuackleWorker('Board changed during simulation');
-  quackleBusy = false;
-  const button = document.getElementById('kibitzBtn');
-  if (button) {
-    button.disabled = false;
-    button.textContent = 'Find Best Moves (Quackle Engine)';
-  }
-  const statusEl = document.getElementById('engineStatus');
-  if (statusEl) statusEl.textContent = status;
-}
-
-function callQuackleWorker(type, payload = {}) {
+function workerRequest(type, payload = {}) {
   return new Promise((resolve, reject) => {
-    if (!quackleWorker) {
-      reject(new Error('Quackle worker is not available'));
-      return;
-    }
-    const id = ++quackleRequestId;
-    const timeoutId = setTimeout(() => {
-      if (quackleRequests.has(id)) resetQuackleWorker('Quackle request timed out');
-    }, 120_000);
-    quackleRequests.set(id, { resolve, reject, timeoutId });
-    try {
-      quackleWorker.postMessage({ id, type, payload });
-    } catch (error) {
-      clearTimeout(timeoutId);
-      quackleRequests.delete(id);
+    if (!quackleWorker) return reject(new Error('Quackle worker is unavailable'));
+    const id = ++workerRequestId;
+    const timer = setTimeout(() => {
+      const entry = workerRequests.get(id);
+      if (entry) {
+        workerRequests.delete(id);
+        entry.reject(new Error('Quackle request timed out. Try again to restart the engine.'));
+        stopWorker();
+      }
+    }, 120000);
+    workerRequests.set(id, {
+      resolve: value => { clearTimeout(timer); resolve(value); },
+      reject: error => { clearTimeout(timer); reject(error); }
+    });
+    try { quackleWorker.postMessage({ id, type, payload }); }
+    catch (error) {
+      clearTimeout(timer);
+      workerRequests.delete(id);
       reject(error);
     }
   });
 }
 
-async function loadQuackleEngine() {
-  if (quackleReady) return true;
-
-  const statusEl = document.getElementById('engineStatus');
-  statusEl.textContent = 'Loading Quackle engine (~28MB dictionary download)...';
-
-  try {
-    if (!quackleWorker) {
-      quackleWorker = new Worker('quackle-worker.js');
-      quackleWorker.addEventListener('message', event => {
-        const request = quackleRequests.get(event.data.id);
-        if (!request) return;
-        quackleRequests.delete(event.data.id);
-        clearTimeout(request.timeoutId);
-        if (event.data.error) {
-          const error = new Error(event.data.error);
-          if (event.data.stack) error.stack = event.data.stack;
-          request.reject(error);
-        } else {
-          request.resolve(event.data.result);
-        }
-      });
-      quackleWorker.addEventListener('error', event => {
-        resetQuackleWorker(event.message || 'Quackle worker failed');
-      });
-      quackleWorker.addEventListener('messageerror', () => {
-        resetQuackleWorker('Quackle worker returned an unreadable response');
-      });
-    }
-
-    const { info } = await callQuackleWorker('init');
-    statusEl.textContent = 'Engine ready. ' + info.replace(/\n/g, ' | ');
-    quackleReady = true;
-    return true;
-  } catch (e) {
-    resetQuackleWorker('Quackle engine initialization failed');
-    statusEl.textContent = 'Engine load failed: ' + e.message;
-    console.error('Quackle WASM error:', e);
-    return false;
-  }
+function stopWorker() {
+  if (quackleWorker) quackleWorker.terminate();
+  quackleWorker = null;
+  workerReady = false;
+  workerPromise = null;
+  for (const request of workerRequests.values()) request.reject(new Error('Quackle worker stopped'));
+  workerRequests.clear();
 }
 
-async function findBestMoves() {
-  const btn = document.getElementById('kibitzBtn');
-  const statusEl = document.getElementById('engineStatus');
-  const runToken = ++quackleRunToken;
-  let statusTimer = null;
-  const iterationLabel = `${QUACKLE_SIMULATION_ITERATIONS} ` +
-    (QUACKLE_SIMULATION_ITERATIONS === 1 ? 'round' : 'rounds');
-  btn.disabled = true;
-  btn.textContent = 'Loading engine...';
-
-  try {
-    if (!lastParsed || !lastParsed.grid) {
-      statusEl.textContent = 'No board data. Analyze a board first.';
-      return;
-    }
-    const bagCount = lastParsed.bag_count;
-    const finalTurnsRemaining = bagCount === 0 ? selectedFinalTurns : 0;
-    if (!Number.isInteger(bagCount) || bagCount < 0) {
-      throw new Error('The tile bag count is required');
-    }
-    if (bagCount === 0 && finalTurnsRemaining !== 1 && finalTurnsRemaining !== 2) {
-      throw new Error('Choose whether one or two Crossplay final turns remain');
-    }
-
-    const ready = await loadQuackleEngine();
-    if (!ready || runToken !== quackleRunToken) return;
-
-    const expectsTerminal = bagCount <= QUACKLE_TERMINAL_BAG_LIMIT;
-    btn.textContent = expectsTerminal ? `Playing ${iterationLabel} to the finish...` : `Simulating ${iterationLabel}...`;
-    statusEl.textContent = expectsTerminal
-      ? `Generating moves and playing ${iterationLabel} per move to the Crossplay finish...`
-      : `Generating moves and running ${iterationLabel}...`;
-    const movesContainer = document.getElementById('movesContainer');
-    movesContainer.classList.add('hidden');
-    movesContainer.innerHTML = '';
-    quackleBusy = true;
-    const startedAt = performance.now();
-    statusTimer = setInterval(() => {
-      const elapsed = Math.floor((performance.now() - startedAt) / 1000);
-      statusEl.textContent = expectsTerminal
-        ? `Generating moves and playing ${iterationLabel} per move to the Crossplay finish... ${elapsed}s`
-        : `Generating moves and running ${iterationLabel}... ${elapsed}s`;
-    }, 1000);
-
-    const result = await callQuackleWorker('simulateKibitz', {
-      gridJson: JSON.stringify(lastParsed.grid),
-      rack: lastParsed.rack || '',
-      playerScore: lastParsed.player_score || 0,
-      opponentScore: lastParsed.opponent_score || 0,
-      numMoves: QUACKLE_MOVE_COUNT,
-      iterations: QUACKLE_SIMULATION_ITERATIONS,
-      bagCount,
-      finalTurnsRemaining,
+async function loadQuackle() {
+  if (workerReady) return;
+  if (workerPromise) return workerPromise;
+  workerPromise = (async () => {
+    quackleWorker = new Worker('quackle-worker.js');
+    quackleWorker.addEventListener('message', event => {
+      const pending = workerRequests.get(event.data.id);
+      if (!pending) return;
+      workerRequests.delete(event.data.id);
+      if (event.data.error) pending.reject(new Error(event.data.error));
+      else pending.resolve(event.data.result);
     });
+    quackleWorker.addEventListener('error', event => {
+      stopWorker();
+      byId('engineStatus').textContent = event.message || 'Quackle worker failed.';
+    });
+    const result = await workerRequest('init');
+    workerReady = true;
+    return result;
+  })();
+  try { return await workerPromise; }
+  catch (error) { stopWorker(); throw error; }
+}
 
-    if (runToken !== quackleRunToken) return;
-    if (result.error) throw new Error(result.error);
-    const moves = Array.isArray(result.moves) ? result.moves : [];
-    const hasCompleteMoves = moves.length > 0 && moves.every(move =>
-      move.samples === QUACKLE_SIMULATION_ITERATIONS &&
-      (!expectsTerminal || move.terminalSamples === QUACKLE_SIMULATION_ITERATIONS) &&
+async function analyzePosition(turn, button, status, output) {
+  button.disabled = true;
+  output.replaceChildren();
+  const began = performance.now();
+  try {
+    const rack = String(turn.rack || '');
+    if (!/^[A-Z?]{1,7}$/.test(rack)) throw new Error('The API did not provide a usable rack for this turn.');
+    if (!Array.isArray(turn.grid) || turn.grid.length !== 15 ||
+        !turn.grid.every(row => typeof row === 'string' && /^[A-Za-z.]{15}$/.test(row))) {
+      throw new Error('The API did not provide a valid 15×15 board for this turn.');
+    }
+    const bagCount = Number(turn.bag_count);
+    const finalTurnsRemaining = bagCount === 0 ? Number(turn.final_turns_remaining) : 0;
+    if (!Number.isInteger(bagCount) || bagCount < 0) throw new Error('The API did not provide a valid bag count for this turn.');
+    if (bagCount === 0 && finalTurnsRemaining !== 1 && finalTurnsRemaining !== 2) {
+      throw new Error('The final-turn count is missing for this position.');
+    }
+    status.textContent = 'Loading the Quackle engine and its dictionary…';
+    await loadQuackle();
+    const playToEnd = bagCount <= TERMINAL_BAG_LIMIT;
+    status.textContent = playToEnd
+      ? 'Generating candidate moves and simulating each to the Crossplay finish…'
+      : 'Generating candidate moves and running two-ply simulations…';
+    const result = await workerRequest('simulateKibitz', {
+      gridJson: JSON.stringify(turn.grid),
+      rack,
+      playerScore: Number(turn.mover_score) || 0,
+      opponentScore: Number(turn.other_score) || 0,
+      numMoves: MOVE_COUNT,
+      iterations: SIMULATION_ITERATIONS,
+      bagCount,
+      finalTurnsRemaining
+    });
+    if (!result || result.simulated !== true || !Array.isArray(result.moves)) {
+      throw new Error((result && result.error) || 'Quackle did not return a complete analysis.');
+    }
+    const completeMoves = result.moves.length > 0 && result.moves.every(move =>
+      move.samples === SIMULATION_ITERATIONS &&
+      (!playToEnd || move.terminalSamples === SIMULATION_ITERATIONS) &&
       Number.isFinite(move.win) && move.win >= 0 && move.win <= 1
     );
-    if (result.simulated !== true ||
-        result.plies !== (expectsTerminal ? -1 : QUACKLE_SIMULATION_PLIES) ||
-        result.playToEnd !== expectsTerminal ||
-        result.simulationMode !== (expectsTerminal ? 'play-to-end' : '2-ply') ||
-        result.winModel !== (expectsTerminal ? 'terminal' : 'bogowin') ||
+    if (result.plies !== (playToEnd ? -1 : SIMULATION_PLIES) ||
+        result.playToEnd !== playToEnd ||
+        result.simulationMode !== (playToEnd ? 'play-to-end' : '2-ply') ||
+        result.winModel !== (playToEnd ? 'terminal' : 'bogowin') ||
         result.bagCount !== bagCount ||
         result.finalTurnsRemaining !== finalTurnsRemaining ||
-        result.iterationsRequested !== QUACKLE_SIMULATION_ITERATIONS ||
-        result.iterationsCompleted !== QUACKLE_SIMULATION_ITERATIONS ||
-        result.candidateCount !== moves.length ||
-        result.totalPlayaheads !== result.iterationsCompleted * moves.length ||
-        !hasCompleteMoves) {
-      throw new Error('Quackle returned incomplete simulation results');
+        result.iterationsRequested !== SIMULATION_ITERATIONS ||
+        result.iterationsCompleted !== SIMULATION_ITERATIONS ||
+        result.candidateCount !== result.moves.length ||
+        result.totalPlayaheads !== result.iterationsCompleted * result.moves.length ||
+        !completeMoves) {
+      throw new Error('Quackle returned incomplete simulation results.');
     }
-
-    renderMoves(moves, result);
-    const elapsed = ((performance.now() - startedAt) / 1000).toFixed(1);
-    const completedLabel = `${result.iterationsCompleted} ` +
-      (result.iterationsCompleted === 1 ? 'round' : 'rounds');
-    statusEl.textContent = expectsTerminal
-      ? `Found ${moves.length} moves. Played ${completedLabel} per move to the official Crossplay finish ` +
-        `(${result.totalPlayaheads.toLocaleString()} playouts total) in ${elapsed}s.`
-      : `Found ${moves.length} moves. Simulated ${completedLabel} per move ` +
-        `(${result.totalPlayaheads.toLocaleString()} playouts total) in ${elapsed}s.`;
-  } catch (e) {
-    if (runToken === quackleRunToken) {
-      statusEl.textContent = 'Error: ' + e.message;
-      console.error('Quackle simulation error:', e);
-    }
+    renderMoves(result.moves, result, output, turn);
+    const elapsed = ((performance.now() - began) / 1000).toFixed(1);
+    status.textContent = 'Finished ' + result.iterationsCompleted + ' simulations per move in ' + elapsed + 's.';
+  } catch (error) {
+    status.textContent = 'Analysis failed: ' + error.message;
   } finally {
-    if (statusTimer) clearInterval(statusTimer);
-    if (runToken === quackleRunToken) {
-      quackleBusy = false;
-      btn.disabled = false;
-      btn.textContent = 'Find Best Moves (Quackle Engine)';
+    button.disabled = false;
+  }
+}
+
+function renderMoves(moves, result, output, turn) {
+  const table = makeElement('table', 'moves-table');
+  const head = document.createElement('thead');
+  const header = document.createElement('tr');
+  for (const label of ['Move', 'Score', 'Leave', 'Win%', 'Equity']) header.append(makeElement('th', '', label));
+  head.append(header);
+  table.append(head);
+  const body = document.createElement('tbody');
+  for (const move of moves) {
+    const row = document.createElement('tr');
+    const tiles = String(move.tiles || '').replace(/\./g, '');
+    const play = (move.position ? move.position + ' ' : '') + tiles;
+    const win = Number.isFinite(move.win) ? (move.win * 100).toFixed(1) + '%' : '—';
+    for (const value of [play, move.score ?? '—', move.leave || '', win,
+      Number.isFinite(move.equity) ? move.equity.toFixed(1) : '—']) {
+      row.append(makeElement('td', '', value));
     }
+    body.append(row);
+  }
+  table.append(body);
+  output.append(table);
+  const note = result.playToEnd
+    ? 'Win estimates use ' + SIMULATION_ITERATIONS + ' sampled hidden racks and draws per move, played to the Crossplay finish.'
+    : 'Win estimates use Quackle’s two-ply model with ' + SIMULATION_ITERATIONS + ' samples per move.';
+  output.append(makeElement('p', 'analysis-note', note));
+  renderWordInsight(turn, moves, output);
+}
+
+async function loadWordFrequency() {
+  if (!wordFrequencyPromise) {
+    wordFrequencyPromise = fetch('wordfreq-en-25000-log.json', { cache: 'force-cache' }).then(response => {
+      if (!response.ok) throw new Error('Frequency list request failed (' + response.status + ').');
+      return response.json();
+    }).then(rows => {
+      if (!Array.isArray(rows)) throw new Error('Frequency list has an unexpected format.');
+      return new Map(rows.filter(row => Array.isArray(row) && typeof row[0] === 'string' && Number.isFinite(row[1]) && /^[a-z]+$/i.test(row[0]))
+        .map(([word, logFrequency]) => [word.toLowerCase(), 9 + Number(logFrequency) / Math.LN10]));
+    }).catch(error => {
+      wordFrequencyPromise = null;
+      throw error;
+    });
+  }
+  return wordFrequencyPromise;
+}
+
+function wordFrequencyLabel(word, frequencies) {
+  const zipf = frequencies.get(String(word || '').toLowerCase());
+  if (!Number.isFinite(zipf)) return { label: 'Not listed in top 25,000', zipf: null, band: 'missing' };
+  if (zipf >= 4) return { label: 'Common', zipf, band: 'common' };
+  if (zipf >= 3) return { label: 'Familiar', zipf, band: 'common' };
+  if (zipf >= 2) return { label: 'Uncommon', zipf, band: 'uncommon' };
+  return { label: 'Rare in corpus', zipf, band: 'uncommon' };
+}
+
+function actionWord(action) {
+  const token = String(action || '').trim().split(/\s+/)[0] || '';
+  const word = token.replace(/[()]/g, '').toUpperCase();
+  return /^[A-Z]{2,15}$/.test(word) ? word : '';
+}
+
+function movePosition(position) {
+  const across = String(position || '').match(/^(\d{1,2})([A-O])$/);
+  const down = String(position || '').match(/^([A-O])(\d{1,2})$/);
+  if (across) return { row: Number(across[1]) - 1, col: COLUMNS.indexOf(across[2]), dr: 0, dc: 1 };
+  if (down) return { row: Number(down[2]) - 1, col: COLUMNS.indexOf(down[1]), dr: 1, dc: 0 };
+  return null;
+}
+
+function candidateWord(turn, move) {
+  const start = movePosition(move.position);
+  const tiles = String(move.tiles || '').toUpperCase();
+  if (!start || !tiles || !Array.isArray(turn.grid)) return '';
+  const board = turn.grid.map(row => row.toUpperCase().split(''));
+  let row = start.row, col = start.col;
+  for (const letter of tiles) {
+    if (row < 0 || row >= 15 || col < 0 || col >= 15) return '';
+    if (letter !== '.') {
+      if (!/^[A-Z]$/.test(letter)) return '';
+      board[row][col] = letter;
+    } else if (board[row][col] === '.') {
+      return '';
+    }
+    row += start.dr;
+    col += start.dc;
+  }
+  row = start.row;
+  col = start.col;
+  while (row - start.dr >= 0 && row - start.dr < 15 && col - start.dc >= 0 && col - start.dc < 15 && board[row - start.dr][col - start.dc] !== '.') {
+    row -= start.dr;
+    col -= start.dc;
+  }
+  let word = '';
+  while (row >= 0 && row < 15 && col >= 0 && col < 15 && board[row][col] !== '.') {
+    word += board[row][col];
+    row += start.dr;
+    col += start.dc;
+  }
+  return /^[A-Z]{2,15}$/.test(word) ? word : '';
+}
+
+function renderWordInsight(turn, moves, output) {
+  const panel = makeElement('section', 'commonness-panel');
+  panel.append(makeElement('h4', '', 'Played word and missed alternatives'));
+  panel.append(makeElement('div', 'analysis-note', 'Comparisons use Quackle’s top ' + moves.length + ' candidate moves. General English frequency is a rough familiarity signal, not a measure of Scrabble skill.'));
+  const status = makeElement('p', 'analysis-note', 'Loading the local word frequency list…');
+  panel.append(status);
+  output.append(panel);
+  loadWordFrequency().then(frequencies => {
+    panel.querySelectorAll('p').forEach(node => node.remove());
+    const actual = actionWord(turn.action);
+    const actualRow = makeElement('p', 'analysis-note');
+    if (actual) {
+      const frequency = wordFrequencyLabel(actual, frequencies);
+      actualRow.append(document.createTextNode('Played ' + actual + ' (' + turn.score + ' points): '));
+      actualRow.append(makeElement('strong', 'commonness-tag commonness-' + frequency.band,
+        frequency.label + (frequency.zipf === null ? '' : ' · Zipf ' + frequency.zipf.toFixed(1))));
+    } else {
+      actualRow.textContent = 'This turn did not play a word (pass or tile exchange).';
+    }
+    panel.append(actualRow);
+
+    const actionParts = String(turn.action || '').trim().split(/\s+/);
+    const actualPosition = actionParts[1] || '';
+    let playedCandidateIndex = actual ? moves.findIndex(move =>
+      candidateWord(turn, move) === actual && String(move.position) === actualPosition) : -1;
+    if (actual && playedCandidateIndex < 0) {
+      playedCandidateIndex = moves.findIndex(move =>
+        String(move.position) === actualPosition && Number(move.score) === Number(turn.score));
+    }
+    const alternatives = moves.map((move, index) => ({ move, index, word: candidateWord(turn, move) }))
+      .filter(item => item.word && (playedCandidateIndex < 0 || item.index < playedCandidateIndex));
+    const common = [], lessCommon = [], unlisted = [];
+    for (const item of alternatives) {
+      item.frequency = wordFrequencyLabel(item.word, frequencies);
+      if (item.frequency.band === 'missing') unlisted.push(item);
+      else if (item.frequency.zipf >= 4) common.push(item);
+      else lessCommon.push(item);
+    }
+    if (playedCandidateIndex === 0) panel.append(makeElement('p', 'analysis-note', 'Quackle ranked the played move first among its candidates.'));
+    else if (playedCandidateIndex > 0) panel.append(makeElement('p', 'analysis-note', 'The played move ranked #' + (playedCandidateIndex + 1) + '; these higher-ranked moves were missed.'));
+    else if (actual) panel.append(makeElement('p', 'analysis-note', 'The played move was outside Quackle’s returned top ' + moves.length + ' candidates; these are the engine’s top alternatives.'));
+    const adjective = playedCandidateIndex >= 0 ? 'higher-ranked ' : 'top ';
+    const groups = [
+      ['Common ' + adjective + 'alternatives', common],
+      ['Less common ' + adjective + 'alternatives', lessCommon],
+      ['' + adjective.charAt(0).toUpperCase() + adjective.slice(1) + 'alternatives with no frequency estimate', unlisted]
+    ];
+    for (const [heading, items] of groups) {
+      if (!items.length) continue;
+      panel.append(makeElement('h4', '', heading));
+      const list = makeElement('ol', 'commonness-list');
+      for (const item of items) {
+        const move = item.move;
+        const frequency = item.frequency;
+        const line = makeElement('li');
+        const stats = '#' + (item.index + 1) + ' · ' + move.score + ' pts · ' +
+          (Number.isFinite(move.win) ? (move.win * 100).toFixed(1) + '% win' : 'win n/a') + ' · ' +
+          (Number.isFinite(move.equity) ? move.equity.toFixed(1) + ' equity' : 'equity n/a');
+        line.append(document.createTextNode(item.word + ' — ' + stats + ' · '));
+        line.append(makeElement('span', 'commonness-tag commonness-' + frequency.band,
+          frequency.label + (frequency.zipf === null ? '' : ' · Zipf ' + frequency.zipf.toFixed(1))));
+        list.append(line);
+      }
+      panel.append(list);
+    }
+    if (!alternatives.length && playedCandidateIndex !== 0) panel.append(makeElement('p', 'analysis-note', 'No other word candidates were available for this position.'));
+    const attribution = makeElement('p', 'analysis-note');
+    attribution.append(document.createTextNode('Frequency source: wordfreq English top 25,000 list, licensed CC BY-SA 4.0. '));
+    const link = document.createElement('a');
+    link.href = 'WORD_FREQUENCY.md';
+    link.textContent = 'Source and attribution';
+    attribution.append(link);
+    panel.append(attribution);
+  }).catch(error => {
+    status.textContent = 'Word commonness is unavailable: ' + error.message;
+  });
+}
+
+byId('cookieForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = byId('cookieInput');
+  const token = input.value.trim();
+  if (!token) { setConnection('Paste your NYT-S cookie first.', 'error'); input.focus(); return; }
+  const button = byId('saveCookieButton');
+  button.disabled = true;
+  setConnection('Checking the NYT session…');
+  try {
+    const data = await api('token', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nyt_s: token })
+    });
+    input.value = '';
+    updateAccountUi(data.username || '');
+    await loadGames();
+  } catch (error) {
+    input.value = '';
+    setConnection(error.message, 'error');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+byId('forgetButton').addEventListener('click', async () => {
+  byId('forgetButton').disabled = true;
+  try {
+    await api('token', { method: 'DELETE' });
+    clearAccountUi('Cookie forgotten on this computer.');
+  } catch (error) {
+    setConnection(error.message, 'error');
+  } finally {
+    byId('forgetButton').disabled = false;
+  }
+});
+
+byId('refreshButton').addEventListener('click', loadGames);
+
+async function start() {
+  try {
+    const state = await api('status');
+    if (!state.configured) {
+      clearAccountUi('Not connected. Paste your NYT-S cookie to load games.');
+      return;
+    }
+    try {
+      const me = await api('me');
+      updateAccountUi(me.username || '');
+      await loadGames();
+    } catch (error) {
+      setConnection('Saved cookie could not be used: ' + error.message, 'error');
+      byId('forgetButton').classList.remove('hidden');
+    }
+  } catch (error) {
+    clearAccountUi('Local API unavailable. Start the app with python3 crossplay_server.py.');
+    byId('connectionState').title = error.message;
   }
 }
 
-function renderMoves(moves, result) {
-  const container = document.getElementById('movesContainer');
-  container.classList.remove('hidden');
-
-  let html = `<h3>Best Moves (${moves.length})</h3><div class="moves-list"><table>`;
-  html += '<tr><th>Move</th><th>Score</th><th>Leave</th><th>Estimated Win%</th><th>Valuation</th></tr>';
-
-  for (let i = 0; i < moves.length; i++) {
-    const m = moves[i];
-    const tiles = m.tiles.replace(/\./g, '');
-    const moveStr = m.position ? `${m.position} ${tiles}` : tiles;
-    const winPct = Number.isFinite(m.win) && m.samples > 0 ? `${(m.win * 100).toFixed(1)}%` : '—';
-    const valuation = m.equity.toFixed(1);
-    html += `<tr><td><b>${moveStr}</b></td><td>${m.score}</td><td>${m.leave || ''}</td>` +
-      `<td data-samples="${m.samples || 0}">${winPct}</td><td>${valuation}</td></tr>`;
-  }
-
-  html += '</table></div>';
-  const hint = result && result.playToEnd
-    ? `Estimated Win% uses ${QUACKLE_SIMULATION_ITERATIONS} sampled hidden racks and draws per move. ` +
-      `Each sample follows the official Crossplay final-turn rules to the finish.`
-    : `Estimated Win% is Quackle's two-ply Bogowin estimate from ` +
-      `${QUACKLE_SIMULATION_ITERATIONS} samples per move.`;
-  container.innerHTML = html + `<p class="hint">${hint}</p>`;
-}
+start();
 </script>
 </body>
 </html>

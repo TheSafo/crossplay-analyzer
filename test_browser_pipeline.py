@@ -225,7 +225,7 @@ class BrowserPipelineTest(unittest.TestCase):
         console_messages = []
         page.on("pageerror", lambda error: page_errors.append(str(error)))
         page.on("console", lambda message: console_messages.append(message.text))
-        page.goto(self.base_url, wait_until="domcontentloaded")
+        page.goto(f"{self.base_url}/screenshot.html", wait_until="domcontentloaded")
         return page, page_errors, console_messages
 
     def wait_for_analysis(self, page):

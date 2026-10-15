@@ -1,52 +1,61 @@
 # Repository Guidelines
 
-Contributor guide for the Crossplay Board Analyzer — a fully offline, deterministic Scrabble board parser. It reads NYT Crossplay screenshots, detects the 15×15 grid, OCRs tile letters, finds words, and runs a Quackle kibitz. **No OpenAI or external API is used.**
+Contributor guide for Crossplay Board Analyzer. It can review finished NYT Crossplay games through a local API proxy, parse screenshots entirely offline, accept manual board input, and analyze positions with the bundled Quackle engine. The game review uses the NYT Crossplay service; no OpenAI API is used.
 
 ## Project Structure & Module Organization
 
-- `index.html` — the entire app (HTML, CSS, and JavaScript in one file). All parsing logic lives here: grid detection, tile detection, letter OCR, and the Quackle integration.
-- `manual.html` — alternate manual board-input page.
-- `quackle.js`, `quackle.wasm`, `quackle.data` — the Quackle WASM engine and dictionary (loaded at runtime).
-- `quackle-worker.js` — runs Quackle move generation and two-ply simulation off the page thread.
-- `test_board.png` and `IMG_*.png` — screenshots used as test fixtures.
-- `test_grid_detection.py` — offline grid-detection test (passes).
-- `test_score_ocr.py` — header score-OCR regression test.
-- `test_browser_pipeline.py` — browser-level parsing and Quackle regression test.
+- `index.html` — game review UI, local API connection, turn replay, and on-demand Quackle analysis.
+- `screenshot.html` — offline screenshot parsing: grid detection, tile detection, OCR, word finding, and Quackle analysis.
+- `manual.html` — manual board-input page.
+- `crossplay_server.py` — localhost-only static server and JSON proxy for NYT Crossplay requests. The NYT-S cookie is saved in a local, ignored `.env` file.
+- `quackle.js`, `quackle.wasm`, `quackle.data` — bundled Quackle engine and dictionary.
+- `quackle-worker.js` — runs Quackle move generation and simulation off the page thread.
+- `test_board.png` and `IMG_*.png` — screenshot fixtures.
+- `test_grid_detection.py`, `test_score_ocr.py`, and `test_browser_pipeline.py` — offline CV/OCR and browser regression tests.
+- `tools/har_summary.py` — summarizes HAR endpoint paths and can write redacted response captures. Keep raw captures, redacted game data, and credentials out of version control.
 
 ## Build, Test, and Development Commands
 
-There is no build step — it is a static site.
+There is no build step. Start the local proxy server to use the review page:
 
 ```bash
-python3 -m pip install -r requirements-test.txt  # use Python 3.10 or newer
-python3 -m playwright install chromium
-python3 -m http.server 8000   # serve the app locally, then open http://localhost:8000
-python3 test_grid_detection.py  # grid/tile detection test (needs numpy, Pillow, scipy)
-python3 test_score_ocr.py       # header score OCR regression test
-python3 test_browser_pipeline.py  # real browser pipeline test (needs Playwright and Chromium)
+python3 crossplay_server.py 8000
+# Open http://localhost:8000
 ```
+
+The server uses Python's standard library. The screenshot tests additionally need Python 3.10+, NumPy, Pillow, SciPy, Playwright, and Chromium:
+
+```bash
+python3 -m pip install -r requirements-test.txt
+python3 -m playwright install chromium
+python3 test_grid_detection.py
+python3 test_score_ocr.py
+python3 test_browser_pipeline.py
+```
+
+The review page talks only to the local server. Do not put NYT cookies in browser storage, query strings, logs, HAR files, or committed fixtures.
 
 ## Coding Style & Naming Conventions
 
-- JavaScript: 2-space indent, `camelCase` functions/variables.
-- Python tests: 4-space indent, `snake_case`.
+- JavaScript: 2-space indent and `camelCase`.
+- Python: 4-space indent and `snake_case`.
 - No linter or formatter is configured; match the surrounding style.
-- Keep the app self-contained in `index.html`; avoid adding external dependencies.
+- Keep browser pages self-contained and avoid adding external runtime dependencies.
+- Keep the screenshot analyzer offline and deterministic. API work belongs in the local server and game review page.
 
 ## Testing Guidelines
 
-- Python tests live at the repo root (`test_*.py`) and run against the example screenshots.
-- The JavaScript pipeline test loads all fixture screenshots in Chromium and checks the exact board, rack, scores, words, and Quackle output.
-- New CV/OCR work should update or add a `test_*.py` so regressions are caught offline.
-- `test_score_ocr.py` is the pass/fail gate for header score OCR.
+- Python tests live at the repository root and use the example screenshots.
+- The browser pipeline test opens `screenshot.html` and checks parsing and Quackle output.
+- New CV/OCR work should update or add a root-level test so regressions remain reproducible offline.
+- API behavior should be exercised against sanitized fixtures or a stubbed client; do not commit account data or credentials.
 
 ## Commit & Pull Request Guidelines
 
-- Commit messages use an imperative, descriptive subject (e.g., `Fix grid detection: ...`, `Add ...`, `Remove ...`) followed by a body explaining the change and validation results.
-- Keep changes focused; reference the behavior being fixed or added.
-- PRs should describe the change, the approach, and the validation performed (test counts, images used).
-- Screenshots or test output are encouraged when changing parsing behavior.
+- Use an imperative, descriptive subject (for example, `Fix grid detection: ...` or `Add game review: ...`) followed by a body explaining the change and validation.
+- Keep changes focused and describe user-visible behavior, implementation, and validation in PRs.
+- Screenshots or sanitized output are useful for UI and parsing changes.
 
 ## Architecture Overview
 
-The pipeline is: **premium-label grid detection → blue/white tile detection → template-match letter and header-score OCR → word finding → Quackle kibitz → simulated win estimates**. Header scores are read automatically from the screenshot using the local digit templates.
+The screenshot path is **premium-label grid detection → tile detection → template-match letter and score OCR → word finding → Quackle kibitz → win estimates**. The game review path is **local NYT-S cookie → localhost proxy → recent finished games → turn-by-turn board reconstruction → Quackle analysis**. The server binds to loopback and blocks remote-host API requests.
