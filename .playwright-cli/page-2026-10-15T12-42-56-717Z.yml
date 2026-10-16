@@ -1,0 +1,27 @@
+- main [ref=e2]:
+  - navigation [ref=e3]:
+    - text: Game Review ·
+    - link "Screenshot Analyzer" [ref=e4] [cursor=pointer]:
+      - /url: screenshot.html
+    - text: ·
+    - link "Manual Board" [ref=e5] [cursor=pointer]:
+      - /url: manual.html
+  - heading "Crossplay Game Review" [level=1] [ref=e6]
+  - paragraph [ref=e7]: Load finished games from your NYT Crossplay account, replay each turn, and compare it with Quackle.
+  - region "NYT account connection" [ref=e8]:
+    - generic [ref=e9]: Checking local connection…
+    - generic [ref=e11]:
+      - textbox "NYT-S cookie" [ref=e12]:
+        - /placeholder: Paste your NYT-S session cookie
+      - button "Connect" [ref=e13] [cursor=pointer]
+    - paragraph [ref=e14]: The NYT-S value is sent only to this local app and saved in a private .env file on this computer. It is never stored in the browser. Use the value of the NYT-S cookie from a signed-in NYTimes browser session.
+  - generic [ref=e15]:
+    - region "Recent games" [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - heading "Finished games" [level=2] [ref=e19]
+          - generic [ref=e20]: Connect to load your games
+        - button "Refresh" [disabled] [ref=e21]
+      - generic [ref=e22]: Connect your NYT account to load recent games.
+    - region "Game review" [ref=e24]:
+      - generic [ref=e25]: Choose a finished game to replay its turns.

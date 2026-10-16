@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["iad1"],
+  "functions": {
+    "api/**/*.py": {
+      "maxDuration": 60,
+      "excludeFiles": "{**/*.html,**/*.png,**/*.wasm,**/*.data,**/IMG_*.png,**/test_*.py,**/requirements-test.txt,**/quackle.*,**/quackle-worker.js,**/wordfreq-*.json}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/crossplay/:path*",
+      "destination": "/api/crossplay?route=:path*"
+    }
+  ]
+}

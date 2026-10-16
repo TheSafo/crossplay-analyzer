@@ -6,3 +6,5 @@ test_board_mosaic.png
 .env
 *.har
 captures/
+.vercel
+.env*

@@ -1,13 +1,16 @@
 # Repository Guidelines
 
-Contributor guide for Crossplay Board Analyzer. It can review finished NYT Crossplay games through a local API proxy, parse screenshots entirely offline, accept manual board input, and analyze positions with the bundled Quackle engine. The game review uses the NYT Crossplay service; no OpenAI API is used.
+Contributor guide for Crossplay Board Analyzer. It can review finished NYT Crossplay games through a local API proxy or a Vercel Function, parse screenshots entirely offline, accept manual board input, and analyze positions with the bundled Quackle engine. The game review uses the NYT Crossplay service; no OpenAI API is used.
 
 ## Project Structure & Module Organization
 
-- `index.html` — game review UI, local API connection, turn replay, and on-demand Quackle analysis.
+- `index.html` — game review UI, same-origin API connection, turn replay, and on-demand Quackle analysis.
 - `screenshot.html` — offline screenshot parsing: grid detection, tile detection, OCR, word finding, and Quackle analysis.
 - `manual.html` — manual board-input page.
-- `crossplay_server.py` — localhost-only static server and JSON proxy for NYT Crossplay requests. The NYT-S cookie is saved in a local, ignored `.env` file.
+- `crossplay_server.py` — localhost static server and JSON proxy for NYT Crossplay requests. Local browser sessions are held in memory. In Vercel, the page holds the NYT-S value in memory and sends it to the function per request.
+- `api/crossplay.py` — Vercel Python Function entry point for the review API.
+- `vercel.json` — Vercel route, region, function duration, and bundle configuration.
+- `.vercelignore` — keeps local fixtures, private data, and development files out of deployments.
 - `quackle.js`, `quackle.wasm`, `quackle.data` — bundled Quackle engine and dictionary.
 - `quackle-worker.js` — runs Quackle move generation and simulation off the page thread.
 - `test_board.png` and `IMG_*.png` — screenshot fixtures.
@@ -16,14 +19,14 @@ Contributor guide for Crossplay Board Analyzer. It can review finished NYT Cross
 
 ## Build, Test, and Development Commands
 
-There is no build step. Start the local proxy server to use the review page:
+Start the local proxy server to use the review page:
 
 ```bash
 python3 crossplay_server.py 8000
 # Open http://localhost:8000
 ```
 
-The server uses Python's standard library. The screenshot tests additionally need Python 3.10+, NumPy, Pillow, SciPy, Playwright, and Chromium:
+The server uses Python's standard library. Vercel serves static files directly and invokes the Python entry point in `api/crossplay.py`; deployment behavior is configured in `vercel.json`. The screenshot tests additionally need Python 3.10+, NumPy, Pillow, SciPy, Playwright, and Chromium:
 
 ```bash
 python3 -m pip install -r requirements-test.txt
@@ -33,7 +36,7 @@ python3 test_score_ocr.py
 python3 test_browser_pipeline.py
 ```
 
-The review page talks only to the local server. Do not put NYT cookies in browser storage, query strings, logs, HAR files, or committed fixtures.
+The review page talks to the same-origin API. On Vercel, the NYT-S value is sent in an HTTPS request header and kept only in page memory; it must be pasted again after reloading. Do not put NYT cookies in browser storage, deployment variables, query strings, logs, HAR files, or committed fixtures.
 
 ## Coding Style & Naming Conventions
 
@@ -58,4 +61,4 @@ The review page talks only to the local server. Do not put NYT cookies in browse
 
 ## Architecture Overview
 
-The screenshot path is **premium-label grid detection → tile detection → template-match letter and score OCR → word finding → Quackle kibitz → win estimates**. The game review path is **local NYT-S cookie → localhost proxy → recent finished games → turn-by-turn board reconstruction → Quackle analysis**. The server binds to loopback and blocks remote-host API requests.
+The screenshot path is **premium-label grid detection → tile detection → template-match letter and score OCR → word finding → Quackle kibitz → win estimates**. The game review path is **NYT-S supplied by each browser → same-origin local API or Vercel Function → recent finished games → turn-by-turn board reconstruction → Quackle analysis**. Locally, the server binds to loopback. Vercel serves the static pages and invokes one Python Function for the review API.

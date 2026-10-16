@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Serve the analyzer locally and load your finished Crossplay games.
+"""Serve the analyzer and load your finished Crossplay games.
 
 Usage:
     python3 crossplay_server.py [port]      # then open http://localhost:8000
 
-Drop-in replacement for `python3 -m http.server`: it serves the static app and
-adds a small JSON API that fetches your own games from the NYT Crossplay
-service with your NYT-S cookie. Paste the cookie on the review page; it is
-saved to `.env` (git-ignored, owner-only permissions) on this computer only.
+The server serves the static app and a JSON API that fetches the current
+browser user's games from NYT Crossplay. Locally, the NYT-S cookie is kept in
+server memory for that browser's session. On Vercel, the page keeps it only in
+memory and sends it to the same-origin API with each request.
 
     GET    /api/crossplay/status               is a cookie configured? (no NYT call)
     GET    /api/crossplay/me                   your NYT games user id and name
@@ -17,33 +17,39 @@ saved to `.env` (git-ignored, owner-only permissions) on this computer only.
     GET    /api/crossplay/games/<id>/review    a finished game, turn by turn
 
 Reviews are only served for completed games, so the tool can't be used to
-look at a game while it is still being played. The server binds to 127.0.0.1,
-rejects requests whose Host is not localhost, and never serves dotfiles or
-captures.
+look at a game while it is still being played. By default the server binds to
+127.0.0.1 for local use. The Vercel function accepts same-origin requests for
+the deployment URL and configured custom domains. The local server never
+serves dotfiles, Python source, or capture files.
 """
 
 import gzip
 import json
 import os
 import re
+import secrets
 import sys
 import threading
 import time
 import urllib.error
 import urllib.request
+from http.cookies import CookieError, SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote, urlsplit
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ENV_PATH = os.path.join(HERE, '.env')
 NYT_BASE = 'https://www.nytimes.com'
 DEFAULT_UA = 'Crossplay/7955 CFNetwork Darwin'
 COLS = 'ABCDEFGHIJKLMNO'
 GAME_ID_RE = re.compile(r'^[a-z0-9]{6,32}$')
-COOKIE_RE = re.compile(r'^[A-Za-z0-9._~+/=%-]{20,4096}$')
+# RFC 6265 cookie-octet characters; NYT-S values can include '^'.
+COOKIE_RE = re.compile(r'^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]{20,4096}$')
 ACROSS_RE = re.compile(r'^(\d{1,2})([A-O])$')
 DOWN_RE = re.compile(r'^([A-O])(\d{1,2})$')
-LOCAL_HOSTS = {'localhost', '127.0.0.1', '[::1]'}
+LOCAL_HOSTS = {'localhost', '127.0.0.1', '::1'}
+SESSION_COOKIE = 'crossplay_session'
+SESSION_TTL_SECONDS = 14 * 24 * 60 * 60
+MAX_SESSIONS = 256
 LIST_CACHE_SECONDS = 15
 TOTAL_TILES = 100
 CENTER = (7, 7)
@@ -239,27 +245,7 @@ def game_review(game, me):
     return review
 
 
-# ── NYT client and cookie storage ────────────────────────────────────────
-
-def load_env(path=ENV_PATH):
-    env = {}
-    if os.path.exists(path):
-        with open(path) as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    env[key.strip()] = value.strip()
-    return env
-
-
-def save_env(env, path=ENV_PATH):
-    """Write .env with owner-only permissions."""
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, 'w') as f:
-        for key, value in env.items():
-            f.write(f'{key}={value}\n')
-    os.chmod(path, 0o600)
+# ── NYT client ────────────────────────────────────────────────────────────
 
 
 class CrossplayClient:
@@ -331,9 +317,9 @@ class CrossplayClient:
 # ── HTTP server ───────────────────────────────────────────────────────────
 
 class Handler(SimpleHTTPRequestHandler):
-    client = None
     client_factory = CrossplayClient
-    env_path = ENV_PATH
+    sessions = {}
+    sessions_lock = threading.Lock()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=HERE, **kwargs)
@@ -342,34 +328,124 @@ class Handler(SimpleHTTPRequestHandler):
         # Keep request lines but never echo bodies or headers.
         sys.stderr.write('%s - %s\n' % (self.address_string(), format % args))
 
-    def send_json(self, status, payload):
+    def send_json(self, status, payload, headers=None):
         body = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Cache-Control', 'no-store')
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def api_route(self):
-        path = self.path.split('?', 1)[0]
+        parsed = urlsplit(self.path)
+        path = parsed.path
+        if os.environ.get('VERCEL') and path == '/api/crossplay':
+            return parse_qs(parsed.query).get('route', [''])[0].strip('/')
         if not path.startswith('/api/crossplay/'):
             return None
         return path[len('/api/crossplay/'):].strip('/')
 
-    def local_request(self):
-        """Block DNS-rebinding and cross-site requests to the local API."""
-        host = (self.headers.get('Host') or '').rsplit(':', 1)[0].lower()
-        if host not in LOCAL_HOSTS:
+    @staticmethod
+    def authority_host(authority):
+        try:
+            return (urlsplit('//' + authority).hostname or '').lower().rstrip('.')
+        except ValueError:
+            return ''
+
+    def allowed_host(self, host_header):
+        host = self.authority_host(host_header)
+        configured_hosts = os.environ.get('APP_ALLOWED_HOSTS', '').split(',')
+        vercel_hosts = [
+            os.environ.get('VERCEL_URL', ''),
+            os.environ.get('VERCEL_PROJECT_PRODUCTION_URL', ''),
+        ]
+        allowed_hosts = {
+            self.authority_host(value.strip())
+            for value in [*vercel_hosts, *configured_hosts]
+            if value.strip()
+        }
+        return host in LOCAL_HOSTS or bool(host and host in allowed_hosts)
+
+    def same_origin_request(self, method):
+        """Accept only this app's host and reject cross-site API mutations."""
+        host = (self.headers.get('Host') or '').strip().lower()
+        if not self.allowed_host(host):
             return False
         origin = self.headers.get('Origin')
         if origin:
-            origin_host = re.sub(r'^https?://', '', origin).rsplit(':', 1)[0].lower()
-            if origin_host not in LOCAL_HOSTS:
+            try:
+                parsed_origin = urlsplit(origin)
+            except ValueError:
                 return False
+            if parsed_origin.scheme not in ('http', 'https') or parsed_origin.netloc.lower() != host:
+                return False
+        elif method in ('PUT', 'DELETE'):
+            return False
         return True
 
+    @classmethod
+    def purge_sessions(cls, now):
+        expired = [
+            session_id for session_id, session in cls.sessions.items()
+            if now > session['expires_at']
+        ]
+        for session_id in expired:
+            del cls.sessions[session_id]
+
+    def session_id_from_cookie(self):
+        cookies = SimpleCookie()
+        try:
+            cookies.load(self.headers.get('Cookie') or '')
+        except CookieError:
+            return None
+        morsel = cookies.get(SESSION_COOKIE)
+        return morsel.value if morsel else None
+
+    def current_session(self):
+        if os.environ.get('VERCEL'):
+            value = (self.headers.get('X-NYT-S') or '').strip()
+            if not COOKIE_RE.fullmatch(value):
+                return None, None
+            return None, self.client_factory(value, os.environ.get('CROSSPLAY_UA', DEFAULT_UA))
+        session_id = self.session_id_from_cookie()
+        if not session_id:
+            return None, None
+        now = time.time()
+        with Handler.sessions_lock:
+            Handler.purge_sessions(now)
+            session = Handler.sessions.get(session_id)
+            if not session:
+                return None, None
+            return session_id, session['client']
+
+    def save_session(self, client, previous_session_id=None):
+        now = time.time()
+        with Handler.sessions_lock:
+            Handler.purge_sessions(now)
+            if previous_session_id in Handler.sessions:
+                del Handler.sessions[previous_session_id]
+            if len(Handler.sessions) >= MAX_SESSIONS:
+                raise CrossplayError('The app is at its active session limit; try again later', 503)
+            session_id = secrets.token_urlsafe(32)
+            Handler.sessions[session_id] = {
+                'client': client,
+                'expires_at': now + SESSION_TTL_SECONDS,
+            }
+            return session_id
+
+    @staticmethod
+    def session_cookie(session_id, max_age):
+        cookie = f'{SESSION_COOKIE}={session_id}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Lax'
+        if os.environ.get('CROSSPLAY_SECURE_COOKIE', '').lower() in ('1', 'true', 'yes'):
+            cookie += '; Secure'
+        return cookie
+
     def do_GET(self):
+        if self.path.split('?', 1)[0] == '/health':
+            return self.send_json(200, {'ok': True})
         route = self.api_route()
         if route is not None:
             return self.handle_api('GET', route)
@@ -382,7 +458,13 @@ class Handler(SimpleHTTPRequestHandler):
                 break
             request_path = decoded_path
         segments = [s for s in request_path.split('/') if s]
-        if any(s.startswith('.') for s in segments) or (segments and segments[0] in ('captures', 'tools')):
+        private_files = {
+            'AGENTS.md', 'Dockerfile', 'README.md', 'requirements-test.txt',
+            'package.json', 'package-lock.json', '.dockerignore', '.gitignore',
+        }
+        if (any(s.startswith('.') for s in segments)
+                or (segments and segments[0] in ('captures', 'tools'))
+                or (segments and (segments[0] in private_files or segments[0].endswith('.py')))):
             return self.send_error(404)
         return super().do_GET()
 
@@ -412,16 +494,17 @@ class Handler(SimpleHTTPRequestHandler):
     def handle_api(self, method, route):
         if route is None:
             return self.send_error(405)
-        if not self.local_request():
-            return self.send_json(403, {'error': 'The Crossplay API only answers this computer'})
+        if not self.same_origin_request(method):
+            return self.send_json(403, {'error': 'The API only accepts same-origin requests'})
         try:
             if route == 'status' and method == 'GET':
-                return self.send_json(200, {'configured': Handler.client is not None})
+                _, client = self.current_session()
+                return self.send_json(200, {'configured': client is not None})
             if route == 'token':
                 return self.handle_token(method)
             if method != 'GET':
                 return self.send_json(405, {'error': 'Method not allowed'})
-            client = Handler.client
+            _, client = self.current_session()
             if client is None:
                 return self.send_json(409, {'error': 'Paste your NYT-S cookie first'})
             me = client.me()
@@ -443,33 +526,40 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(502, {'error': f'Unexpected game data: {e}'})
 
     def handle_token(self, method):
-        env = load_env(self.env_path)
         if method == 'DELETE':
-            env.pop('NYT_S', None)
-            save_env(env, self.env_path)
-            Handler.client = None
-            return self.send_json(200, {'configured': False})
+            if os.environ.get('VERCEL'):
+                return self.send_json(200, {'configured': False})
+            session_id = self.session_id_from_cookie()
+            if session_id:
+                with Handler.sessions_lock:
+                    Handler.sessions.pop(session_id, None)
+            return self.send_json(200, {'configured': False}, {
+                'Set-Cookie': self.session_cookie('', 0),
+            })
         if method != 'PUT':
             return self.send_json(405, {'error': 'Method not allowed'})
         value = str(self.read_json_body().get('nyt_s') or '').strip()
         value = re.sub(r'^NYT-S=', '', value).strip().strip('"')
         if not COOKIE_RE.match(value):
-            return self.send_json(400, {'error': "That doesn't look like an NYT-S cookie value"})
-        client = self.client_factory(value, env.get('CROSSPLAY_UA', DEFAULT_UA))
+            return self.send_json(400, {
+                'error': 'Paste only the NYT-S cookie value, not the full Cookie header'
+            })
+        client = self.client_factory(value, os.environ.get('CROSSPLAY_UA', DEFAULT_UA))
         me = client.me()  # validates the cookie before saving it
-        env['NYT_S'] = value
-        save_env(env, self.env_path)
-        Handler.client = client
-        return self.send_json(200, {'configured': True, **me})
+        if os.environ.get('VERCEL'):
+            return self.send_json(200, {'configured': True, **me})
+        previous_session_id, _ = self.current_session()
+        session_id = self.save_session(client, previous_session_id)
+        return self.send_json(200, {'configured': True, **me}, {
+            'Set-Cookie': self.session_cookie(session_id, SESSION_TTL_SECONDS),
+        })
 
 
 def main():
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    env = load_env()
-    if env.get('NYT_S'):
-        Handler.client = CrossplayClient(env['NYT_S'], env.get('CROSSPLAY_UA', DEFAULT_UA))
-    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
-    print(f'Serving http://localhost:{port}')
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get('PORT', '8000'))
+    host = os.environ.get('HOST', '127.0.0.1')
+    server = ThreadingHTTPServer((host, port), Handler)
+    print(f'Serving on {host}:{port}')
     try:
         server.serve_forever()
     except KeyboardInterrupt:

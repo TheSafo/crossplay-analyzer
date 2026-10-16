@@ -137,7 +137,7 @@
         aria-label="NYT-S cookie" placeholder="Paste your NYT-S session cookie">
       <button id="saveCookieButton" type="submit">Connect</button>
     </form>
-    <p class="account-help">The NYT-S value is sent only to this local app and saved in a private .env file on this computer. It is never stored in the browser. Use the value of the NYT-S cookie from a signed-in NYTimes browser session.</p>
+    <p class="account-help">The NYT-S value is sent only to this app (over HTTPS on Vercel). On Vercel it stays in this page's memory and is sent only to this app's API; re-enter it after reloading or closing the page. Locally, the server keeps it in memory and your browser holds an HttpOnly session identifier. Use the value of the NYT-S cookie from a signed-in NYTimes browser session.</p>
   </section>
 
   <div class="workspace">
@@ -188,6 +188,7 @@ let workerReady = false;
 let workerPromise = null;
 let workerRequestId = 0;
 const workerRequests = new Map();
+let activeNytCookie = '';
 
 const byId = id => document.getElementById(id);
 
@@ -205,10 +206,12 @@ function setConnection(message, state = '') {
 }
 
 async function api(path, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (activeNytCookie) headers['X-NYT-S'] = activeNytCookie;
   const response = await fetch('/api/crossplay/' + path, {
     cache: 'no-store',
     ...options,
-    headers: { ...(options.headers || {}) }
+    headers
   });
   let data = {};
   try { data = await response.json(); } catch (_) {}
@@ -236,6 +239,7 @@ function updateAccountUi(username) {
 }
 
 function clearAccountUi(message) {
+  activeNytCookie = '';
   setConnection(message || 'Not connected', message && /could not|expired|error/i.test(message) ? 'error' : '');
   byId('forgetButton').classList.add('hidden');
   byId('refreshButton').disabled = true;
@@ -950,6 +954,7 @@ byId('cookieForm').addEventListener('submit', async event => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nyt_s: token })
     });
+    activeNytCookie = token.replace(/^NYT-S=/, '').trim().replace(/^"|"$/g, '');
     input.value = '';
     updateAccountUi(data.username || '');
     await loadGames();
@@ -965,7 +970,7 @@ byId('forgetButton').addEventListener('click', async () => {
   byId('forgetButton').disabled = true;
   try {
     await api('token', { method: 'DELETE' });
-    clearAccountUi('Cookie forgotten on this computer.');
+    clearAccountUi('Cookie forgotten for this browser.');
   } catch (error) {
     setConnection(error.message, 'error');
   } finally {
@@ -991,7 +996,7 @@ async function start() {
       byId('forgetButton').classList.remove('hidden');
     }
   } catch (error) {
-    clearAccountUi('Local API unavailable. Start the app with python3 crossplay_server.py.');
+    clearAccountUi('The app API is unavailable. Reload the page or start the local server with python3 crossplay_server.py.');
     byId('connectionState').title = error.message;
   }
 }

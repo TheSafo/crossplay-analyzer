@@ -1,0 +1,20 @@
+# Repository guidance and development notes
+AGENTS.md
+README.md
+WORD_FREQUENCY.md
+QUACKLE_BUILD.md
+
+# Tests, screenshot fixtures, and local tooling
+requirements-test.txt
+test_*.py
+test_board.png
+IMG_*.png
+*_debug.png
+tools/
+.github/
+.playwright-cli/
+
+# Local data and credentials
+.env*
+captures/
+*.har
