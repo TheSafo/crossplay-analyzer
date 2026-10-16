@@ -18,7 +18,7 @@ The screenshot parser is at `/screenshot.html` and the manual board page is at `
 
 ## Deploy to Vercel
 
-Vercel serves the HTML and analyzer assets as static files and runs the game-review API as a Python Function. [`vercel.json`](vercel.json) configures the same-origin API route, function region, duration, and bundle exclusions. No build command or third-party runtime Python package is needed. Vercel's Python runtime is [generally available](https://vercel.com/changelog/python-on-vercel-is-now-generally-available).
+Vercel serves the HTML and analyzer assets as static files and runs the game-review API as a Python Function. [`vercel.json`](vercel.json) configures the same-origin API route, function region, duration, and bundle exclusions. The function uses `cryptography` from `requirements.txt` to encrypt remembered NYT cookies. Vercel's Python runtime is [generally available](https://vercel.com/changelog/python-on-vercel-is-now-generally-available).
 
 1. Connect a GitHub repository in Vercel, or install the Vercel CLI and sign in:
 
@@ -32,11 +32,26 @@ Vercel serves the HTML and analyzer assets as static files and runs the game-rev
 
 2. Keep the project root as the repository root and the framework preset as **Other**. Leave the build command and output directory empty; Vercel serves the root files directly.
 3. Deploy a preview with `vercel`, then deploy production with `vercel --prod`. With GitHub connected, pushes can deploy automatically.
-4. Open the HTTPS deployment URL. Each person pastes their own NYT-S cookie on the game-review page.
+4. Configure Supabase and Google sign-in before using the production deployment:
 
-For this stateless Vercel version, the NYT-S value stays in page memory and is sent over HTTPS in a request header to this app's API. It is not placed in a website cookie, local storage, or a query string. Reloading or closing the page clears it, so paste it again next time. The local server keeps its existing in-memory browser session. Vercel ignores local fixtures, developer notes, and test tooling through `.vercelignore`.
+   - Apply the checked-in migration with the Supabase CLI from the repository root:
 
-Vercel Hobby is free for personal, non-commercial use. The [Hobby plan](https://vercel.com/docs/plans/hobby) allows Functions up to 60 seconds, which is configured here. If you later want the connection to survive page reloads, Supabase can store encrypted server-side sessions; the current app does not need a database.
+     ```bash
+     supabase link --project-ref xxqskwsnnfnpghatcbds
+     supabase db push
+     ```
+
+     The linked project ref is the one in `supabase-config.js`. Supabase CLI state is local and ignored by Git.
+   - In Supabase **Authentication → Providers → Google**, enable Google and enter a Google OAuth client ID and secret. In Google Cloud, set the authorized redirect URI to the callback URL shown in that Supabase provider page. Keep the Google client secret in Supabase, not in Vercel or this repository.
+   - In Supabase **Authentication → URL Configuration**, set the production Site URL to your Vercel app URL and add it to the redirect allow list. Supabase allows wildcard patterns for Vercel preview URLs; only add previews if you plan to use them.
+   - In Vercel **Project → Settings → Environment Variables**, add `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, and `NYT_COOKIE_ENCRYPTION_KEY` for Production (and Preview if desired). `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are the project URL and public key in `supabase-config.js`; `SUPABASE_SECRET_KEY` must be a new server-only `sb_secret_...` key from Supabase **Settings → API Keys**. Generate a separate 32-byte encryption key locally with `python3 -c 'import secrets; print(secrets.token_hex(32))'` and save that output directly as `NYT_COOKIE_ENCRYPTION_KEY` in Vercel. Do not commit or paste that encryption key into chat. Changing it makes previously remembered NYT cookies unreadable, so users would need to reconnect.
+   - Redeploy after adding the variables.
+
+5. Open the HTTPS deployment URL, choose **Sign in with Google**, then paste the `NYT-S` cookie from a signed-in NYTimes browser session. Imported games and completed analyses are saved to the signed-in Supabase account. The cookie is sent over HTTPS and is encrypted before it is stored when **Remember this NYT cookie encrypted on my account** is checked; uncheck it to keep the cookie only in page memory. **Forget cookie** deletes the saved copy.
+
+The local server keeps its existing in-memory browser session and does not use Supabase persistence. The screenshot parser and manual board page remain local browser tools. Vercel ignores local fixtures, developer notes, and test tooling through `.vercelignore`.
+
+Vercel Hobby is free for personal, non-commercial use. The [Hobby plan](https://vercel.com/docs/plans/hobby) allows Functions up to 60 seconds, which is configured here.
 
 Do not put NYT cookies in deployment variables, browser storage, query strings, logs, HAR files, or committed fixtures. If you add a custom Vercel domain, set `APP_ALLOWED_HOSTS` to its hostname in the Vercel project environment variables.
 

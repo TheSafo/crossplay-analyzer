@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crossplay Game Review</title>
+<meta name="description" content="Review completed NYT Crossplay games, replay turns, and compare plays with Quackle. Analyze screenshots or enter a board manually.">
+<title>Crossplay Board Analyzer — Game Review</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; min-height: 100vh; padding: 22px; background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -23,11 +24,14 @@
   .panel { border: 1px solid #333; border-radius: 9px; background: #16213e; padding: 15px; }
   .account { margin-bottom: 18px; }
   .account-top, .section-heading, .review-heading, .turn-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .account-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .account-state { color: #b9c8db; font-size: .9rem; }
   .account-state.connected { color: #75d39a; }
   .account-state.error { color: #f08080; }
   .account-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .account-form input { flex: 1; min-width: 220px; padding: 10px 12px; border: 1px solid #3a4760; border-radius: 6px; background: #101a32; color: #fff; }
+  .remember-cookie { display: flex; flex: 0 0 100%; align-items: center; gap: 7px; color: #aab4c3; font-size: .8rem; }
+  .remember-cookie input { flex: 0 0 auto; min-width: 0; margin: 0; accent-color: #7e43a4; }
   .account-form input:focus { outline: 2px solid #4a6fa5; }
   .account-help, .muted { color: #8c96a7; font-size: .82rem; line-height: 1.45; }
   .account-help { margin: 9px 0 0; }
@@ -105,6 +109,30 @@
   .commonness-uncommon { color: #e8c77a; }
   .commonness-missing { color: #9ba6b7; }
   .analysis-note a { color: #9dbce0; }
+  .dashboard { display: grid; gap: 12px; margin: 12px 0 16px; }
+  .dashboard-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .dashboard-stat { min-width: 0; padding: 12px; border: 1px solid #2c3a56; border-radius: 8px; background: #101a32; }
+  .dashboard-stat-label { color: #8c96a7; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; }
+  .dashboard-stat-value { margin-top: 5px; color: #fff; font-size: 1.15rem; font-weight: 700; }
+  .dashboard-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .dashboard-charts .panel { min-width: 0; margin: 0; }
+  .quality-summary { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+  .quality-count, .quality-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 999px; font-size: .72rem; font-weight: 650; white-space: nowrap; }
+  .quality-best { color: #9be4b4; background: #203d35; }
+  .quality-inaccuracy { color: #f0d184; background: #443a23; }
+  .quality-mistake { color: #ffc17c; background: #4a3424; }
+  .quality-blunder { color: #ff9b9b; background: #4a2d36; }
+  .quality-unrated { color: #c1c9d5; background: #2d3749; }
+  .quality-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 4px; }
+  .quality-legend span { display: inline-flex; align-items: center; gap: 5px; color: #b8c3d2; font-size: .72rem; }
+  .quality-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .quality-point { cursor: pointer; }
+  .quality-point:focus { outline: none; }
+  .quality-point:focus rect { stroke: #fff; stroke-width: 2; }
+  .turn-quality { margin-top: 6px; }
+  .turn-row { min-width: 0; }
+  .turn-row .turn-player { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .turn-row .quality-chip { margin-left: auto; flex: 0 0 auto; }
   .hidden { display: none !important; }
   @media (max-width: 900px) {
     body { padding: 14px; }
@@ -114,6 +142,10 @@
   }
   @media (max-width: 650px) {
     .review-heading { flex-direction: column; }
+    .dashboard-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .dashboard-stat { padding: 9px; }
+    .dashboard-stat-value { font-size: 1rem; }
+    .dashboard-charts { grid-template-columns: 1fr; }
     .review-body { grid-template-columns: 1fr; }
     .turn-list-panel { max-height: 270px; }
     .scoreline { white-space: normal; }
@@ -123,21 +155,29 @@
 </head>
 <body>
 <main class="container">
-  <nav class="site-nav"><span>Game Review</span> · <a href="screenshot.html">Screenshot Analyzer</a> · <a href="manual.html">Manual Board</a></nav>
-  <h1>Crossplay Game Review</h1>
+  <nav class="site-nav"><span>Game Review</span> · <a href="screenshot.html">Screenshot Analyzer</a> · <a href="manual.html">Manual Board</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></nav>
+  <h1>Crossplay Board Analyzer</h1>
   <p class="subtitle">Load finished games from your NYT Crossplay account, replay each turn, and compare it with Quackle.</p>
 
   <section class="panel account" aria-label="NYT account connection">
     <div class="account-top">
       <div id="connectionState" class="account-state">Checking local connection…</div>
-      <button id="forgetButton" class="danger-button hidden" type="button">Forget cookie</button>
+      <div class="account-actions">
+        <button id="googleSignInButton" class="hidden" type="button">Sign in with Google</button>
+        <button id="signOutButton" class="hidden" type="button">Sign out</button>
+        <button id="forgetButton" class="danger-button hidden" type="button">Forget cookie</button>
+      </div>
     </div>
     <form id="cookieForm" class="account-form">
       <input id="cookieInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"
         aria-label="NYT-S cookie" placeholder="Paste your NYT-S session cookie">
       <button id="saveCookieButton" type="submit">Connect</button>
+      <label id="rememberCookieRow" class="remember-cookie hidden">
+        <input id="rememberNytCookie" type="checkbox" checked>
+        Remember this NYT cookie encrypted on my account
+      </label>
     </form>
-    <p class="account-help">The NYT-S value is sent only to this app (over HTTPS on Vercel). On Vercel it stays in this page's memory and is sent only to this app's API; re-enter it after reloading or closing the page. Locally, the server keeps it in memory and your browser holds an HttpOnly session identifier. Use the value of the NYT-S cookie from a signed-in NYTimes browser session.</p>
+    <p class="account-help">Google sign-in identifies your account here and does not connect other Google services; you still connect your NYT account separately. On Vercel, a remembered NYT-S value is encrypted before saving and can be removed with Forget cookie. Locally, the server keeps it in memory. Use the value of the NYT-S cookie from a signed-in NYTimes browser session. See our <a href="privacy.html">Privacy Policy</a>.</p>
   </section>
 
   <div class="workspace">
@@ -158,6 +198,8 @@
   </div>
 </main>
 
+<script src="supabase-config.js"></script>
+<script src="supabase-auth.js"></script>
 <script>
 const PREMIUM_COORDS = {
   '3L': 'A1 O1 G2 I2 F5 J5 E6 K6 B7 N7 B9 N9 E10 K10 F11 J11 G14 I14 A15 O15',
@@ -182,6 +224,8 @@ let currentTurnIndex = 0;
 let boardView = 'after';
 let trendResults = null;
 let trendRequestToken = 0;
+let moveQualityResults = null;
+let moveQualityRequestToken = 0;
 let wordFrequencyPromise = null;
 let quackleWorker = null;
 let workerReady = false;
@@ -189,6 +233,10 @@ let workerPromise = null;
 let workerRequestId = 0;
 const workerRequests = new Map();
 let activeNytCookie = '';
+let persistenceEnabled = false;
+let signedInUser = null;
+let nytConfigured = false;
+const ANALYSIS_VERSION = 'quackle-equity-v1';
 
 const byId = id => document.getElementById(id);
 
@@ -207,6 +255,8 @@ function setConnection(message, state = '') {
 
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
+  const accessToken = await window.CrossplayAuth.accessToken();
+  if (accessToken) headers.Authorization = 'Bearer ' + accessToken;
   if (activeNytCookie) headers['X-NYT-S'] = activeNytCookie;
   const response = await fetch('/api/crossplay/' + path, {
     cache: 'no-store',
@@ -232,14 +282,42 @@ function setGameMessage(message) {
 }
 
 function updateAccountUi(username) {
-  setConnection(username ? 'Connected as ' + username : 'Connected to your NYT account', 'connected');
+  nytConfigured = true;
+  const signedInLabel = persistenceEnabled && signedInUser
+    ? 'Signed in as ' + (signedInUser.email || 'Google account') + ' · ' : '';
+  setConnection(signedInLabel + (username ? 'NYT connected as ' + username : 'NYT cookie connected'), 'connected');
   byId('forgetButton').classList.remove('hidden');
   byId('refreshButton').disabled = false;
   byId('saveCookieButton').textContent = 'Replace cookie';
 }
 
-function clearAccountUi(message) {
+function updateAuthUi() {
+  const signedIn = Boolean(signedInUser);
+  byId('googleSignInButton').classList.toggle('hidden', !persistenceEnabled || signedIn);
+  byId('signOutButton').classList.toggle('hidden', !persistenceEnabled || !signedIn);
+  byId('cookieForm').classList.toggle('hidden', persistenceEnabled && !signedIn);
+  byId('rememberCookieRow').classList.toggle('hidden', !persistenceEnabled || !signedIn);
+  if (!nytConfigured) byId('forgetButton').classList.add('hidden');
+  byId('refreshButton').disabled = !nytConfigured;
+}
+
+function showNytDisconnected(message, state = '') {
+  nytConfigured = false;
   activeNytCookie = '';
+  setConnection(message, state);
+  byId('forgetButton').classList.add('hidden');
+  byId('saveCookieButton').textContent = 'Connect';
+  byId('refreshButton').disabled = true;
+  updateAuthUi();
+}
+
+function clearAccountUi(message) {
+  trendRequestToken++;
+  moveQualityRequestToken++;
+  trendResults = null;
+  moveQualityResults = null;
+  activeNytCookie = '';
+  nytConfigured = false;
   setConnection(message || 'Not connected', message && /could not|expired|error/i.test(message) ? 'error' : '');
   byId('forgetButton').classList.add('hidden');
   byId('refreshButton').disabled = true;
@@ -250,14 +328,16 @@ function clearAccountUi(message) {
   currentReview = null;
   byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'Choose a finished game to replay its turns.'));
   setGameMessage('Connect your NYT account to load recent games.');
+  updateAuthUi();
 }
 
-async function loadGames() {
+async function loadGames({ refresh = false } = {}) {
   byId('refreshButton').disabled = true;
   byId('gameCount').textContent = 'Loading…';
   setGameMessage('Loading recent games…');
   try {
-    const data = await api('games');
+    const useLiveRefresh = persistenceEnabled && refresh;
+    const data = await api(useLiveRefresh ? 'games/refresh' : 'games', useLiveRefresh ? { method: 'POST' } : {});
     games = Array.isArray(data.games) ? data.games : [];
     renderGames();
   } catch (error) {
@@ -265,7 +345,7 @@ async function loadGames() {
     setGameMessage(error.message);
     if (/cookie|session|logged in/i.test(error.message)) setConnection(error.message, 'error');
   } finally {
-    byId('refreshButton').disabled = false;
+    byId('refreshButton').disabled = !nytConfigured;
   }
 }
 
@@ -278,7 +358,9 @@ function renderGames() {
   const list = byId('gameList');
   list.replaceChildren();
   if (!completed.length) {
-    setGameMessage(games.length ? 'There are no finished games in the recent games list yet.' :
+    setGameMessage(persistenceEnabled && signedInUser && !games.length
+      ? 'No games imported yet. Connect NYT and press Refresh to import recent games.'
+      : games.length ? 'There are no finished games in the recent games list yet.' :
       'No recent Crossplay games were returned for this account.');
     return;
   }
@@ -301,6 +383,8 @@ function renderGames() {
 async function openGame(gameId) {
   trendRequestToken++;
   trendResults = null;
+  moveQualityRequestToken++;
+  moveQualityResults = null;
   boardView = 'after';
   activeGameId = gameId;
   renderGames();
@@ -308,11 +392,34 @@ async function openGame(gameId) {
   byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'Loading game review…'));
   try {
     currentReview = await api('games/' + encodeURIComponent(gameId) + '/review');
+    const stored = currentReview.stored_analysis;
+    if (stored && stored.version === ANALYSIS_VERSION) {
+      trendResults = stored.win_trend || null;
+      moveQualityResults = stored.move_quality || null;
+    }
     currentTurnIndex = Math.max(0, currentReview.turns.length - 1);
     renderGames();
     renderReview();
   } catch (error) {
     byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', error.message));
+  }
+}
+
+async function persistCompletedAnalysis() {
+  if (!persistenceEnabled || !signedInUser || !currentReview) return null;
+  const payload = { analysis_version: ANALYSIS_VERSION };
+  if (trendResults && trendResults.state === 'done') payload.win_trend = trendResults;
+  if (moveQualityResults && moveQualityResults.state === 'done') payload.move_quality = moveQualityResults;
+  if (!payload.win_trend && !payload.move_quality) return null;
+  try {
+    await api('games/' + encodeURIComponent(currentReview.id) + '/analysis', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return null;
+  } catch (error) {
+    return error.message;
   }
 }
 
@@ -394,6 +501,13 @@ function renderReview() {
   header.append(makeElement('div', 'scoreline', String(review.my_score ?? '—') + '  –  ' + String(review.opponent_score ?? '—')));
   root.append(header);
 
+  const dashboard = makeElement('section', 'dashboard');
+  dashboard.append(makeDashboardStats(review));
+  const charts = makeElement('div', 'dashboard-charts');
+  charts.append(makeTrendPanel(review), makeMoveQualityPanel(review));
+  dashboard.append(charts);
+  root.append(dashboard);
+
   const body = makeElement('div', 'review-body');
   const turnPanel = makeElement('div', 'turn-panel');
   const controls = makeElement('div', 'turn-controls');
@@ -435,6 +549,8 @@ function renderReview() {
   details.push('Bag: ' + turn.bag_count);
   if (turn.swapped_tiles) details.push('Swapped: ' + turn.swapped_tiles);
   meta.append(makeElement('div', 'turn-subtitle', details.join(' · ')));
+  const qualityPoint = moveQualityResults && moveQualityResults.points[currentTurnIndex];
+  if (qualityPoint) meta.append(makeQualityBadge(qualityPoint, true));
   turnPanel.append(meta);
   const board = boardView === 'after' && Array.isArray(turn.grid_after) ? turn.grid_after : turn.grid;
   turnPanel.append(renderBoard(board, turn.action));
@@ -461,13 +577,14 @@ function renderReview() {
     const player = makeElement('span', 'turn-player', (index + 1) + '. ' + (item.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent')));
     const score = makeElement('span', 'turn-score', (item.action || 'Pass').split(' ').slice(0, 2).join(' ') + ' · +' + item.score);
     row.append(player, score);
+    const point = moveQualityResults && moveQualityResults.points[index];
+    if (point) row.append(makeQualityBadge(point, false, true));
     row.addEventListener('click', () => selectTurn(index));
     turnList.append(row);
   });
   turnListPanel.append(turnList);
   body.append(turnListPanel);
   root.append(body);
-  root.append(makeTrendPanel(review));
 }
 
 function selectTurn(index) {
@@ -482,6 +599,175 @@ function svgElement(name, attrs = {}) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', name);
   for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
   return node;
+}
+
+function makeDashboardStats(review) {
+  const stats = makeElement('div', 'dashboard-stats');
+  const mine = Number(review.my_score), theirs = Number(review.opponent_score);
+  const margin = mine - theirs;
+  const hasScores = review.my_score !== null && review.my_score !== undefined && String(review.my_score).trim() !== '' &&
+    review.opponent_score !== null && review.opponent_score !== undefined && String(review.opponent_score).trim() !== '';
+  const result = !hasScores || !Number.isFinite(mine) || !Number.isFinite(theirs) ? 'Complete' :
+    margin > 0 ? 'Win' : margin < 0 ? 'Loss' : 'Draw';
+  const values = [
+    ['Result', result],
+    ['Final spread', hasScores && Number.isFinite(margin) ? (margin > 0 ? '+' : '') + margin : '—'],
+    ['Moves', review.turns.length]
+  ];
+  for (const [label, value] of values) {
+    const card = makeElement('div', 'dashboard-stat');
+    card.append(makeElement('div', 'dashboard-stat-label', label));
+    card.append(makeElement('div', 'dashboard-stat-value', value));
+    stats.append(card);
+  }
+  return stats;
+}
+
+function qualityBand(loss) {
+  if (loss < 1) return 'best';
+  if (loss < 3) return 'inaccuracy';
+  if (loss < 8) return 'mistake';
+  return 'blunder';
+}
+
+function qualityLabel(category) {
+  return ({ best: 'Best', inaccuracy: 'Inaccuracy', mistake: 'Mistake', blunder: 'Blunder', unrated: 'Unrated' })[category] || 'Unrated';
+}
+
+function makeQualityBadge(point, detail = false, compact = false) {
+  const category = point.category || 'unrated';
+  const loss = Number.isFinite(point.loss) ? ' · ' + point.loss.toFixed(1) : '';
+  const text = qualityLabel(category) + (category === 'unrated' || compact ? '' : loss);
+  const badge = makeElement('span', 'quality-chip quality-' + category + (detail ? ' turn-quality' : ''), text);
+  badge.title = category === 'unrated'
+    ? point.reason || 'This played move could not be matched to a returned Quackle candidate.'
+    : qualityLabel(category) + ': ' + point.loss.toFixed(1) + ' equity points below Quackle’s best returned candidate.';
+  return badge;
+}
+
+function makeMoveQualityPanel(review) {
+  const panel = makeElement('section', 'panel quality-panel');
+  panel.append(makeElement('h3', '', 'Move quality by equity lost'));
+  const controls = makeElement('div', 'trend-controls');
+  const button = makeElement('button', 'analysis-button', moveQualityResults && moveQualityResults.state === 'running' ? 'Stop move analysis' :
+    (moveQualityResults && moveQualityResults.state === 'done' ? 'Re-analyze moves' : 'Analyze move quality'));
+  button.type = 'button';
+  button.addEventListener('click', () => {
+    if (moveQualityResults && moveQualityResults.state === 'running') {
+      moveQualityRequestToken++;
+      moveQualityResults = { ...moveQualityResults, state: 'stopped', message: 'Move-quality analysis stopped.' };
+      refreshMoveQualityPanel();
+      return;
+    }
+    startMoveQuality(review);
+  });
+  controls.append(button);
+  panel.append(controls);
+  panel.append(makeElement('div', 'trend-status', moveQualityResults
+    ? moveQualityResults.message || ''
+    : 'Run Quackle once across the game to score played moves.'));
+  if (moveQualityResults && moveQualityResults.points && moveQualityResults.points.length) {
+    const rated = moveQualityResults.points.filter(point => point.category !== 'unrated');
+    const summary = makeElement('div', 'quality-summary');
+    for (const category of ['best', 'inaccuracy', 'mistake', 'blunder']) {
+      const count = rated.filter(point => point.category === category).length;
+      if (!count) continue;
+      summary.append(makeElement('span', 'quality-count quality-' + category, count + ' ' + qualityLabel(category)));
+    }
+    const unratedCount = moveQualityResults.points.length - rated.length;
+    if (unratedCount) summary.append(makeElement('span', 'quality-count quality-unrated', unratedCount + ' unrated'));
+    if (summary.childNodes.length) panel.append(summary);
+    const chart = makeElement('div', 'trend-chart quality-chart');
+    chart.append(drawEquityLossChart(moveQualityResults.points, review.turns.length));
+    panel.append(chart);
+    const legend = makeElement('div', 'quality-legend');
+    for (const category of ['best', 'inaccuracy', 'mistake', 'blunder', 'unrated']) {
+      const item = makeElement('span');
+      item.append(makeElement('i', 'quality-dot quality-' + category));
+      item.append(document.createTextNode(qualityLabel(category)));
+      legend.append(item);
+    }
+    panel.append(legend);
+  }
+  panel.append(makeElement('p', 'analysis-note', 'Lower is better. Loss is the gap from the played move to Quackle’s best returned candidate. Provisional bands: Best <1 point; Inaccuracy 1–<3; Mistake 3–<8; Blunder ≥8. Quackle equity is a score plus rack-leave estimate, not win probability. Passes, exchanges, and moves outside the top ' + MOVE_COUNT + ' are unrated.'));
+  return panel;
+}
+
+function drawEquityLossChart(points, totalTurns) {
+  const width = 760, height = 260;
+  const margin = { top: 18, right: 14, bottom: 37, left: 48 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const rated = points.filter(point => Number.isFinite(point.loss));
+  const maxLoss = Math.max(10, ...rated.map(point => point.loss));
+  const yMax = Math.ceil(maxLoss / 5) * 5;
+  const x = turnIndex => margin.left + (turnIndex + 0.5) / Math.max(1, totalTurns) * plotWidth;
+  const y = value => margin.top + plotHeight - value / yMax * plotHeight;
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Quackle equity points lost by game turn; select a bar to review that turn' });
+  for (let i = 0; i <= 4; i++) {
+    const value = yMax * i / 4;
+    svg.append(svgElement('line', { x1: margin.left, x2: width - margin.right, y1: y(value), y2: y(value), stroke: '#34415a', 'stroke-width': 1 }));
+    const label = svgElement('text', { x: margin.left - 8, y: y(value) + 4, fill: '#9aa7bb', 'font-size': 11, 'text-anchor': 'end' });
+    label.textContent = String(Math.round(value));
+    svg.append(label);
+  }
+  const tickCount = Math.min(8, totalTurns);
+  for (let i = 0; i < tickCount; i++) {
+    const turnNumber = tickCount === 1 ? 1 : Math.round(1 + i * (totalTurns - 1) / (tickCount - 1));
+    const label = svgElement('text', { x: x(turnNumber - 1), y: height - 10, fill: '#9aa7bb', 'font-size': 11, 'text-anchor': 'middle' });
+    label.textContent = String(turnNumber);
+    svg.append(label);
+  }
+  const xLabel = svgElement('text', { x: margin.left + plotWidth / 2, y: height - 1, fill: '#9aa7bb', 'font-size': 10, 'text-anchor': 'middle' });
+  xLabel.textContent = 'Game turn · click a marker to inspect';
+  svg.append(xLabel);
+  const barWidth = Math.max(3, Math.min(14, plotWidth / Math.max(1, totalTurns) * 0.68));
+  const colors = { best: '#75d39a', inaccuracy: '#e8c77a', mistake: '#f0a45f', blunder: '#f08080', unrated: '#8490a4' };
+  for (const point of points) {
+    const group = svgElement('g', { class: 'quality-point', tabindex: 0, role: 'button', 'aria-label': point.category === 'unrated'
+      ? 'Turn ' + (point.turnIndex + 1) + ', unrated. Select to inspect.'
+      : 'Turn ' + (point.turnIndex + 1) + ', ' + qualityLabel(point.category) + ', ' + point.loss.toFixed(1) + ' equity points lost. Select to inspect.' });
+    const title = svgElement('title');
+    title.textContent = point.category === 'unrated'
+      ? 'Turn ' + (point.turnIndex + 1) + ' · Unrated · ' + (point.reason || 'No matching Quackle candidate') + ' · ' + (point.action || 'Pass')
+      : 'Turn ' + (point.turnIndex + 1) + ' · ' + qualityLabel(point.category) + ' · ' + point.loss.toFixed(1) + ' equity points lost · ' + (point.action || 'Pass');
+    group.append(title);
+    const centerX = x(point.turnIndex);
+    if (Number.isFinite(point.loss)) {
+      const topY = y(point.loss);
+      const bottomY = y(0);
+      group.append(svgElement('rect', { x: centerX - barWidth / 2, y: Math.min(topY, bottomY - 3), width: barWidth, height: Math.max(3, bottomY - topY), rx: 2, fill: colors[point.category] || colors.unrated }));
+    } else {
+      group.append(svgElement('circle', { cx: centerX, cy: y(0) - 3, r: Math.max(3, barWidth / 2), fill: colors.unrated }));
+    }
+    const inspect = () => selectTurn(point.turnIndex);
+    group.addEventListener('click', inspect);
+    group.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); inspect(); }
+    });
+    svg.append(group);
+  }
+  return svg;
+}
+
+function refreshMoveQualityPanel() {
+  const existing = byId('reviewPanel').querySelector('.quality-panel');
+  if (existing && currentReview) existing.replaceWith(makeMoveQualityPanel(currentReview));
+  const points = moveQualityResults && moveQualityResults.points || [];
+  byId('reviewPanel').querySelectorAll('.turn-row').forEach((row, index) => {
+    row.querySelectorAll('.quality-chip').forEach(node => node.remove());
+    if (points[index]) row.append(makeQualityBadge(points[index], false, true));
+  });
+  const meta = byId('reviewPanel').querySelector('.turn-meta');
+  if (meta) {
+    meta.querySelectorAll('.turn-quality').forEach(node => node.remove());
+    if (points[currentTurnIndex]) meta.append(makeQualityBadge(points[currentTurnIndex], true));
+  }
+}
+
+function refreshTrendPanel() {
+  const existing = byId('reviewPanel').querySelector('.trend-panel');
+  if (existing && currentReview) existing.replaceWith(makeTrendPanel(currentReview));
 }
 
 function makeTrendPanel(review) {
@@ -526,11 +812,6 @@ function makeTrendPanel(review) {
   }
   panel.append(makeElement('p', 'analysis-note', 'Each estimate is taken at the start of the numbered turn and assumes that player chooses Quackle’s top-ranked move. The final point is the actual game result. Estimates use ' + TREND_ITERATIONS + ' samples; they are approximate and can vary between runs.'));
   return panel;
-}
-
-function refreshTrendPanel() {
-  const existing = byId('reviewPanel').querySelector('.trend-panel');
-  if (existing && currentReview) existing.replaceWith(makeTrendPanel(currentReview));
 }
 
 function drawTrendChart(points, totalTurns) {
@@ -584,6 +865,11 @@ function validAnalysisTurn(turn) {
 const TREND_ITERATIONS = 80;
 
 async function startWinTrend(review) {
+  if (moveQualityResults && moveQualityResults.state === 'running') {
+    trendResults = { ...(trendResults || {}), state: 'error', points: trendResults && trendResults.points || [], message: 'Stop move-quality analysis before starting the win trend.' };
+    refreshTrendPanel();
+    return;
+  }
   const token = ++trendRequestToken;
   trendResults = { state: 'running', points: [], current: 0, message: 'Preparing Quackle…' };
   refreshTrendPanel();
@@ -632,12 +918,105 @@ async function startWinTrend(review) {
     trendResults.points.push({ x: turns.length, mine: actual, theirs: 100 - actual, actual: true });
     trendResults.state = 'done';
     trendResults.message = 'Win trend complete.';
+    const saveError = await persistCompletedAnalysis();
+    if (token !== trendRequestToken) return;
+    if (saveError) trendResults.message += ' Save failed: ' + saveError;
   } catch (error) {
     if (token !== trendRequestToken) return;
     trendResults.state = 'error';
     trendResults.message = 'Could not build trend: ' + error.message;
   }
   refreshTrendPanel();
+}
+
+async function startMoveQuality(review) {
+  if (trendResults && trendResults.state === 'running') {
+    moveQualityResults = { ...(moveQualityResults || {}), state: 'error', points: moveQualityResults && moveQualityResults.points || [], message: 'Stop the win trend before starting move-quality analysis.' };
+    refreshMoveQualityPanel();
+    return;
+  }
+  const token = ++moveQualityRequestToken;
+  moveQualityResults = { state: 'running', points: [], current: 0, message: 'Preparing Quackle…' };
+  refreshMoveQualityPanel();
+  const turns = review.turns;
+  try {
+    await loadQuackle();
+    for (let index = 0; index < turns.length; index++) {
+      if (token !== moveQualityRequestToken || activeGameId !== review.id) return;
+      const turn = turns[index];
+      moveQualityResults.message = 'Scoring turn ' + (index + 1) + ' of ' + turns.length + '…';
+      const status = byId('reviewPanel').querySelector('.quality-panel .trend-status');
+      if (status) status.textContent = moveQualityResults.message;
+      let point;
+      if (!validAnalysisTurn(turn)) {
+        point = makeUnratedPoint(index, turn, 'Missing a valid board, rack, or bag count.');
+      } else if (!actionWord(turn.action)) {
+        point = makeUnratedPoint(index, turn, 'Passes and tile exchanges have no played word to compare.');
+      } else {
+        const bagCount = Number(turn.bag_count);
+        const finalTurnsRemaining = bagCount === 0 ? Number(turn.final_turns_remaining) : 0;
+        const result = await workerRequest('simulateKibitz', {
+          gridJson: JSON.stringify(turn.grid),
+          rack: String(turn.rack),
+          playerScore: Number(turn.mover_score) || 0,
+          opponentScore: Number(turn.other_score) || 0,
+          numMoves: MOVE_COUNT,
+          iterations: 1,
+          bagCount,
+          finalTurnsRemaining
+        });
+        if (token !== moveQualityRequestToken || activeGameId !== review.id) return;
+        if (!result || result.simulated !== true || !Array.isArray(result.moves)) {
+          throw new Error('Quackle did not return move candidates for turn ' + (index + 1) + '.');
+        }
+        const moves = result.moves;
+        const candidates = moves.filter(move => Number.isFinite(move.equity));
+        const playedIndex = findPlayedCandidateIndex(turn, moves, false);
+        if (playedIndex < 0) {
+          const looseMatch = findPlayedCandidateIndex(turn, moves, true);
+          point = makeUnratedPoint(index, turn, looseMatch >= 0
+            ? 'The played word could not be matched exactly to a Quackle candidate.'
+            : 'Played move was outside Quackle’s returned top ' + MOVE_COUNT + ' candidates.');
+        } else if (!Number.isFinite(moves[playedIndex].equity) || !candidates.length) {
+          point = makeUnratedPoint(index, turn, 'Quackle returned no equity value for the played move.');
+        } else {
+          const bestEquity = Math.max(...candidates.map(move => move.equity));
+          const loss = Math.max(0, bestEquity - moves[playedIndex].equity);
+          point = {
+            turnIndex: index,
+            turn: index + 1,
+            mine: Boolean(turn.mine),
+            action: turn.action,
+            category: qualityBand(loss),
+            loss,
+            playedEquity: moves[playedIndex].equity,
+            bestEquity,
+            candidateRank: playedIndex + 1,
+            candidateCount: moves.length
+          };
+        }
+      }
+      moveQualityResults.points.push(point);
+      moveQualityResults.current = index + 1;
+      refreshMoveQualityPanel();
+    }
+    if (token !== moveQualityRequestToken || activeGameId !== review.id) return;
+    const rated = moveQualityResults.points.filter(point => point.category !== 'unrated').length;
+    moveQualityResults.state = 'done';
+    moveQualityResults.message = 'Move-quality analysis complete · ' + rated + ' of ' + turns.length + ' moves rated.';
+    const saveError = await persistCompletedAnalysis();
+    if (token !== moveQualityRequestToken) return;
+    if (saveError) moveQualityResults.message += ' Save failed: ' + saveError;
+  } catch (error) {
+    if (token !== moveQualityRequestToken) return;
+    moveQualityResults.state = 'error';
+    moveQualityResults.message = 'Could not analyze move quality: ' + error.message;
+  }
+  refreshMoveQualityPanel();
+}
+
+function makeUnratedPoint(turnIndex, turn, reason) {
+  return { turnIndex, turn: turnIndex + 1, mine: Boolean(turn && turn.mine), action: turn && turn.action, category: 'unrated', loss: null, reason };
 }
 
 function workerRequest(type, payload = {}) {
@@ -862,6 +1241,18 @@ function candidateWord(turn, move) {
   return /^[A-Z]{2,15}$/.test(word) ? word : '';
 }
 
+function findPlayedCandidateIndex(turn, moves, allowScoreFallback = true) {
+  const actual = actionWord(turn.action);
+  if (!actual) return -1;
+  const actionParts = String(turn.action || '').trim().split(/\s+/);
+  const actualPosition = actionParts[1] || '';
+  let index = moves.findIndex(move => candidateWord(turn, move) === actual && String(move.position) === actualPosition);
+  if (index < 0 && allowScoreFallback) {
+    index = moves.findIndex(move => String(move.position) === actualPosition && Number(move.score) === Number(turn.score));
+  }
+  return index;
+}
+
 function renderWordInsight(turn, moves, output) {
   const panel = makeElement('section', 'commonness-panel');
   panel.append(makeElement('h4', '', 'Played word and missed alternatives'));
@@ -883,14 +1274,7 @@ function renderWordInsight(turn, moves, output) {
     }
     panel.append(actualRow);
 
-    const actionParts = String(turn.action || '').trim().split(/\s+/);
-    const actualPosition = actionParts[1] || '';
-    let playedCandidateIndex = actual ? moves.findIndex(move =>
-      candidateWord(turn, move) === actual && String(move.position) === actualPosition) : -1;
-    if (actual && playedCandidateIndex < 0) {
-      playedCandidateIndex = moves.findIndex(move =>
-        String(move.position) === actualPosition && Number(move.score) === Number(turn.score));
-    }
+    const playedCandidateIndex = findPlayedCandidateIndex(turn, moves);
     const alternatives = moves.map((move, index) => ({ move, index, word: candidateWord(turn, move) }))
       .filter(item => item.word && (playedCandidateIndex < 0 || item.index < playedCandidateIndex));
     const common = [], lessCommon = [], unlisted = [];
@@ -952,12 +1336,12 @@ byId('cookieForm').addEventListener('submit', async event => {
     const data = await api('token', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nyt_s: token })
+      body: JSON.stringify({ nyt_s: token, remember: byId('rememberNytCookie').checked })
     });
-    activeNytCookie = token.replace(/^NYT-S=/, '').trim().replace(/^"|"$/g, '');
+    activeNytCookie = data.remembered ? '' : token.replace(/^NYT-S=/, '').trim().replace(/^"|"$/g, '');
     input.value = '';
     updateAccountUi(data.username || '');
-    await loadGames();
+    await loadGames({ refresh: true });
   } catch (error) {
     input.value = '';
     setConnection(error.message, 'error');
@@ -970,7 +1354,14 @@ byId('forgetButton').addEventListener('click', async () => {
   byId('forgetButton').disabled = true;
   try {
     await api('token', { method: 'DELETE' });
-    clearAccountUi('Cookie forgotten for this browser.');
+    activeNytCookie = '';
+    nytConfigured = false;
+    if (persistenceEnabled) {
+      showNytDisconnected('NYT cookie forgotten. Your saved games remain available.');
+      await loadGames();
+    } else {
+      clearAccountUi('Cookie forgotten for this browser.');
+    }
   } catch (error) {
     setConnection(error.message, 'error');
   } finally {
@@ -978,11 +1369,67 @@ byId('forgetButton').addEventListener('click', async () => {
   }
 });
 
-byId('refreshButton').addEventListener('click', loadGames);
+byId('googleSignInButton').addEventListener('click', async () => {
+  byId('googleSignInButton').disabled = true;
+  try { await window.CrossplayAuth.signInWithGoogle(); }
+  catch (error) { setConnection(error.message, 'error'); }
+  finally { byId('googleSignInButton').disabled = false; }
+});
+
+byId('signOutButton').addEventListener('click', async () => {
+  byId('signOutButton').disabled = true;
+  try {
+    await window.CrossplayAuth.signOut();
+    signedInUser = null;
+    clearAccountUi('Signed out. Sign in with Google to load your saved games.');
+    updateAuthUi();
+  } catch (error) {
+    setConnection(error.message, 'error');
+  } finally {
+    byId('signOutButton').disabled = false;
+  }
+});
+
+byId('refreshButton').addEventListener('click', () => loadGames({ refresh: true }));
 
 async function start() {
+  let authError = null;
+  try {
+    await window.CrossplayAuth.initialize();
+  } catch (error) {
+    authError = error;
+  }
+  signedInUser = window.CrossplayAuth.getSession() && window.CrossplayAuth.getSession().user || null;
   try {
     const state = await api('status');
+    persistenceEnabled = Boolean(state.auth_required);
+    if (persistenceEnabled && !state.authenticated) {
+      signedInUser = null;
+      clearAccountUi(authError ? authError.message : 'Sign in with Google to load your saved games.');
+      setGameMessage('Sign in with Google to see imported games.');
+      return;
+    }
+    if (persistenceEnabled) {
+      if (!signedInUser) signedInUser = { email: state.email || '' };
+      else if (state.email && !signedInUser.email) signedInUser.email = state.email;
+      updateAuthUi();
+      if (!state.configured) {
+        showNytDisconnected('Signed in as ' + (signedInUser.email || 'Google account') + '. Connect your NYT cookie to import games.');
+        await loadGames();
+        return;
+      }
+      nytConfigured = true;
+      try {
+        const me = await api('me');
+        updateAccountUi(me.username || '');
+      } catch (error) {
+        setConnection('Saved NYT cookie could not be used: ' + error.message, 'error');
+        byId('forgetButton').classList.remove('hidden');
+      }
+      await loadGames();
+      return;
+    }
+    updateAuthUi();
     if (!state.configured) {
       clearAccountUi('Not connected. Paste your NYT-S cookie to load games.');
       return;

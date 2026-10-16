@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Privacy Policy for Crossplay Board Analyzer, including Google sign-in, NYT account connections, and saved game reviews.">
+<title>Privacy Policy — Crossplay Board Analyzer</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; padding: 22px; background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.65; }
+  a { color: #9dbce0; }
+  main { max-width: 860px; margin: 0 auto; }
+  nav { margin-bottom: 18px; color: #888; font-size: .88rem; }
+  nav a { text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  h1, h2 { color: #fff; line-height: 1.25; }
+  h1 { margin: 0 0 6px; font-size: 1.9rem; }
+  h2 { margin: 28px 0 8px; font-size: 1.18rem; }
+  p, ul { margin: 10px 0; }
+  ul { padding-left: 24px; }
+  li { margin: 5px 0; }
+  .updated, .note { color: #aab4c3; font-size: .9rem; }
+  .panel { padding: 22px; border: 1px solid #333; border-radius: 10px; background: #16213e; }
+  @media (max-width: 600px) { body { padding: 16px; } .panel { padding: 17px; } }
+</style>
+</head>
+<body>
+<main>
+  <nav aria-label="Main navigation"><a href="index.html">Crossplay Game Review</a> · <a href="terms.html">Terms of Service</a></nav>
+  <article class="panel">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: October 15, 2026</p>
+    <p>This policy describes how Crossplay Board Analyzer (the “App”) handles information when you use the game review, screenshot analysis, or manual board tools. The App is an independent project and is not affiliated with or endorsed by The New York Times Company.</p>
+
+    <h2>Information we handle</h2>
+    <ul>
+      <li><strong>Google sign-in:</strong> If you sign in with Google, Supabase Auth receives the Google account identifier and basic profile information Google returns, such as your email address and name. We use this information to create or recognize your App account, secure account-specific requests, and show which account is signed in. The App does not request access to Gmail, Drive, Calendar, or other Google services.</li>
+      <li><strong>NYT account connection:</strong> To load your finished Crossplay games, you may paste the NYT-S session cookie from your own signed-in NYTimes browser session. The App sends it to its API to validate your connection and request game information from the NYTimes service.</li>
+      <li><strong>Game information and analysis:</strong> When you import or review games while signed in on the hosted App, the App stores game identifiers, game summaries, player names returned with the game, scores, turns, board positions, and any completed Quackle analysis in your account.</li>
+      <li><strong>Screenshots and manual boards:</strong> Screenshot parsing, pasted board data, and Quackle analysis run in your browser. Files you select are processed locally and are not uploaded by the App. If you provide an image URL, your browser requests that image from the website hosting it.</li>
+      <li><strong>Basic technical information:</strong> The hosting, authentication, database, and NYTimes services may receive technical information needed to deliver and secure their services, such as IP address, request details, and device or browser information, under their own privacy policies.</li>
+    </ul>
+
+    <h2>How we use Google user data</h2>
+    <p>We use Google-provided account information only to authenticate you, maintain your Crossplay Board Analyzer account, and display your signed-in identity. We do not sell Google user data, use it for advertising, or use it to train generalized AI or machine-learning models. Our use of information received through Google sign-in adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+
+    <h2>Storage and retention</h2>
+    <ul>
+      <li>The hosted App stores account information, imported game data, and completed analyses in Supabase, associated with your Supabase account. These records are kept while the account remains active, unless you request deletion sooner.</li>
+      <li>If you choose “Remember this NYT cookie encrypted on my account,” the hosted App encrypts the cookie on its server before storing it in Supabase. It remains saved until you replace it, choose “Forget cookie,” or request deletion. If you leave that option unchecked, the cookie is kept in page memory and sent to the App API only as needed.</li>
+      <li>When you run the App locally, the local server keeps the NYT cookie in memory for that session; it is cleared when the server stops. Local use does not save game history to the hosted App account.</li>
+      <li>The browser stores your Supabase sign-in session in local storage so you can remain signed in. Signing out clears that local session. The temporary sign-in verifier is kept in session storage and removed after the sign-in callback.</li>
+    </ul>
+
+    <h2>How information is shared</h2>
+    <p>We do not sell or rent personal information. Information is shared only as needed to operate the App: Google provides sign-in, Supabase provides authentication and database storage, Vercel hosts the public App and its API, and the NYTimes service provides the Crossplay game information you request. These services handle information under their own terms and privacy policies. Your NYT-S cookie is sent to the NYTimes service so it can authenticate requests for your games.</p>
+
+    <h2>Security</h2>
+    <p>The hosted App uses HTTPS for browser-to-server requests. A remembered NYT-S cookie is encrypted by the App’s server before storage, and account records are associated with the signed-in Supabase user. No method of transmission or storage can be guaranteed completely secure, so keep your Google account and NYTimes session credentials private and use “Forget cookie” when you no longer want the App to retain a saved cookie.</p>
+
+    <h2>Your choices and deletion requests</h2>
+    <p>You can sign out to clear the App’s browser session, and use “Forget cookie” to delete a remembered NYT-S cookie. To request deletion of your App account and its stored game records, or to ask a privacy question, email <a href="mailto:jakesafo@gmail.com">jakesafo@gmail.com</a>. Deleting the saved cookie does not delete imported games or analyses.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>We may update this policy when the App or its data practices change. The latest version and its effective date will be posted on this page.</p>
+
+    <h2>Contact</h2>
+    <p>For privacy questions or deletion requests, email <a href="mailto:jakesafo@gmail.com">jakesafo@gmail.com</a>.</p>
+  </article>
+</main>
+</body>
+</html>

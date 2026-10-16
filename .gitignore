@@ -8,3 +8,4 @@ test_board_mosaic.png
 captures/
 .vercel
 .env*
+supabase/.temp/

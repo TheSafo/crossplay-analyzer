@@ -7,8 +7,11 @@ Contributor guide for Crossplay Board Analyzer. It can review finished NYT Cross
 - `index.html` — game review UI, same-origin API connection, turn replay, and on-demand Quackle analysis.
 - `screenshot.html` — offline screenshot parsing: grid detection, tile detection, OCR, word finding, and Quackle analysis.
 - `manual.html` — manual board-input page.
-- `crossplay_server.py` — localhost static server and JSON proxy for NYT Crossplay requests. Local browser sessions are held in memory. In Vercel, the page holds the NYT-S value in memory and sends it to the function per request.
+- `crossplay_server.py` — localhost static server and JSON proxy for NYT Crossplay requests. Local browser sessions are held in memory. In Vercel, Supabase Auth identifies users; the page can hold the NYT-S value in memory, or the function can decrypt a remembered per-user cookie from Supabase before making NYT requests.
 - `api/crossplay.py` — Vercel Python Function entry point for the review API.
+- `supabase-auth.js` and `supabase-config.js` — browser PKCE login and public Supabase project config.
+- `supabase/migrations/` — schema for per-user imported games, completed analyses, and encrypted NYT cookie storage.
+- `requirements.txt` — Python runtime dependencies for Vercel Functions.
 - `vercel.json` — Vercel route, region, function duration, and bundle configuration.
 - `.vercelignore` — keeps local fixtures, private data, and development files out of deployments.
 - `quackle.js`, `quackle.wasm`, `quackle.data` — bundled Quackle engine and dictionary.
@@ -36,7 +39,7 @@ python3 test_score_ocr.py
 python3 test_browser_pipeline.py
 ```
 
-The review page talks to the same-origin API. On Vercel, the NYT-S value is sent in an HTTPS request header and kept only in page memory; it must be pasted again after reloading. Do not put NYT cookies in browser storage, deployment variables, query strings, logs, HAR files, or committed fixtures.
+The review page talks to the same-origin API. On Vercel, the NYT-S value is sent in an HTTPS request header and kept only in page memory unless the user opts to remember it; remembered values are encrypted by the function before they are stored in Supabase. Do not put NYT cookies in browser storage, deployment variables, query strings, logs, HAR files, or committed fixtures. Supabase secret keys and the cookie encryption key belong only in Vercel environment variables.
 
 ## Coding Style & Naming Conventions
 
@@ -61,4 +64,4 @@ The review page talks to the same-origin API. On Vercel, the NYT-S value is sent
 
 ## Architecture Overview
 
-The screenshot path is **premium-label grid detection → tile detection → template-match letter and score OCR → word finding → Quackle kibitz → win estimates**. The game review path is **NYT-S supplied by each browser → same-origin local API or Vercel Function → recent finished games → turn-by-turn board reconstruction → Quackle analysis**. Locally, the server binds to loopback. Vercel serves the static pages and invokes one Python Function for the review API.
+The screenshot path is **premium-label grid detection → tile detection → template-match letter and score OCR → word finding → Quackle kibitz → win estimates**. The game review path is **NYT-S supplied by the browser or decrypted from per-user encrypted storage → same-origin local API or Vercel Function → imported finished games and reviews in Supabase → turn-by-turn board reconstruction → on-demand Quackle analysis saved per game**. Vercel requests require a verified Supabase Auth user. Locally, the server binds to loopback and keeps the NYT session in memory.
