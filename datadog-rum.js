@@ -1,5 +1,5 @@
 // Public browser credentials, NOT DD_API_KEY / DD_APP_KEY. Fill in both values
-// from a Datadog Browser RUM application on datadoghq.com to enable monitoring.
+// from a Datadog Browser RUM application on us5.datadoghq.com to enable monitoring.
 (() => {
   const applicationId = 'REPLACE_WITH_DATADOG_RUM_APPLICATION_ID';
   const clientToken = 'REPLACE_WITH_DATADOG_RUM_CLIENT_TOKEN';
@@ -17,7 +17,7 @@
     window.DD_RUM.init({
       applicationId,
       clientToken,
-      site: 'datadoghq.com',
+      site: 'us5.datadoghq.com',
       service: 'crossplay-analyzer',
       env: 'production',
       sessionSampleRate: 100,
@@ -42,6 +42,6 @@
 
   const sdk = document.createElement('script');
   sdk.async = true;
-  sdk.src = 'https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js';
+  sdk.src = 'https://www.datadoghq-browser-agent.com/us5/v6/datadog-rum.js';
   document.head.appendChild(sdk);
 })();

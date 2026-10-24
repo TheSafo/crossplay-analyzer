@@ -59,14 +59,14 @@ test('all entry pages load shared RUM config before application scripts', () => 
 });
 
 for (const sdkReady of [false, true]) {
-  test(`RUM uses US1, masks inputs and disables replay (SDK ready: ${sdkReady})`, () => {
+  test(`RUM uses US5, masks inputs and disables replay (SDK ready: ${sdkReady})`, () => {
     const { scripts, config } = loadRum({ applicationId: 'test-app', clientToken: 'test-token', sdkReady });
     assert.equal(scripts.length, 1);
     assert.equal(scripts[0].async, true);
-    assert.equal(scripts[0].src, 'https://www.datadoghq-browser-agent.com/us1/v6/datadog-rum.js');
+    assert.equal(scripts[0].src, 'https://www.datadoghq-browser-agent.com/us5/v6/datadog-rum.js');
     assert.equal(config.applicationId, 'test-app');
     assert.equal(config.clientToken, 'test-token');
-    assert.equal(config.site, 'datadoghq.com');
+    assert.equal(config.site, 'us5.datadoghq.com');
     assert.equal(config.service, 'crossplay-analyzer');
     assert.equal(config.env, 'production');
     assert.equal(config.defaultPrivacyLevel, 'mask');

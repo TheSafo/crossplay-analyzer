@@ -22,7 +22,7 @@ The screenshot parser is at `/screenshot.html` and the manual board page is at `
 
 ## Datadog
 
-All integrations target the US1 site, `datadoghq.com`, with service
+All integrations target the US5 site, `us5.datadoghq.com`, with service
 `crossplay-analyzer`. Browser monitoring uses environment `production`; tests
 use `ci`.
 
@@ -33,9 +33,9 @@ use `ci`.
    - `REPLACE_WITH_DATADOG_RUM_APPLICATION_ID`: the RUM application ID.
    - `REPLACE_WITH_DATADOG_RUM_CLIENT_TOKEN`: the RUM client token.
 2. Redeploy. `index.html`, `screenshot.html`, and `manual.html` load that shared
-   file, which loads the US1 Browser RUM v6 SDK asynchronously from Datadog's
+   file, which loads the US5 Browser RUM v6 SDK asynchronously from Datadog's
    CDN. Until **both** placeholders are filled, it loads no SDK and sends no
-   telemetry. Allow `www.datadoghq-browser-agent.com` and Datadog US1 RUM intake
+   telemetry. Allow `www.datadoghq-browser-agent.com` and Datadog US5 RUM intake
    in any deployment content security policy or network allow list.
 3. Verify page views, resources, and browser errors in RUM / Error Tracking.
 
@@ -96,7 +96,7 @@ npm run test:rum                 # no npm dependencies or Datadog credentials
 npm test                         # full Python and RUM presubmit suite
 ```
 
-The Python command needs `requirements-test.txt` and a Playwright Chromium
+The Python suites need `requirements-test.txt` and a Playwright Chromium
 installation, as described below. Local tests do not upload to Datadog unless
 explicitly instrumented and given credentials.
 

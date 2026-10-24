@@ -16,7 +16,7 @@ jobs:
     env:
       DD_API_KEY: ${{ secrets.DD_API_KEY }}
       DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
-      DD_SITE: datadoghq.com
+      DD_SITE: us5.datadoghq.com
     steps:
       - uses: actions/checkout@v4
       - name: Explain missing credentials
@@ -28,11 +28,11 @@ jobs:
         with:
           dd_api_key: ${{ secrets.DD_API_KEY }}
           dd_app_key: ${{ secrets.DD_APP_KEY }}
-          dd_site: datadoghq.com
+          dd_site: us5.datadoghq.com
       - name: Datadog Software Composition Analysis (SCA)
         if: ${{ !cancelled() && env.DD_API_KEY != '' && env.DD_APP_KEY != '' }}
         uses: DataDog/datadog-sca-github-action@main
         with:
           dd_api_key: ${{ secrets.DD_API_KEY }}
           dd_app_key: ${{ secrets.DD_APP_KEY }}
-          dd_site: datadoghq.com
+          dd_site: us5.datadoghq.com
