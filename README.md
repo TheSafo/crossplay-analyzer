@@ -78,3 +78,9 @@ python3 -m unittest test_game_sharing.py
 ```
 
 Keep local `.env` files, HAR captures, and account game data out of commits. Those files are ignored by Git.
+
+## License
+
+Licensed under the [GNU Affero General Public License v3.0](LICENSE). If you run a modified version of this project as a network service, you must offer its source to the users of that service.
+
+The bundled Quackle engine (`quackle.js`, `quackle.wasm`, `quackle.data`) is built from [Quackle](https://github.com/quackle/quackle), which is licensed under the GPL. Check the dictionary data bundled with it for its own terms. "NYT Crossplay" is a trademark of its owner, and this project is not affiliated with or endorsed by The New York Times.
