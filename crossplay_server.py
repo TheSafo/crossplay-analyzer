@@ -3,6 +3,7 @@
 
 Usage:
     python3 crossplay_server.py [port]      # then open http://localhost:8000
+    python3 crossplay_server.py --mock-nyt  # synthetic NYT data for local testing
 
 The server serves the static app and a JSON API that fetches the current
 browser user's games from NYT Crossplay. Locally, the NYT-S cookie is kept in
@@ -23,6 +24,7 @@ the deployment URL and configured custom domains. The local server never
 serves dotfiles, Python source, or capture files.
 """
 
+import argparse
 import base64
 import gzip
 import json
@@ -837,14 +839,27 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get('PORT', '8000'))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('port', nargs='?', type=int, default=int(os.environ.get('PORT', '8000')))
+    parser.add_argument('--mock-nyt', action='store_true',
+                        help='Use synthetic NYT responses without credentials or network access')
+    args = parser.parse_args()
+    handler = Handler
+    if args.mock_nyt:
+        if os.environ.get('VERCEL'):
+            parser.error('--mock-nyt is only available for local development')
+        from tools.mock_nyt import MOCK_COOKIE, MockHandler
+        handler = MockHandler
+        print(f'MOCK NYT: synthetic data only. Connect with {MOCK_COOKIE}', flush=True)
     host = os.environ.get('HOST', '127.0.0.1')
-    server = ThreadingHTTPServer((host, port), Handler)
-    print(f'Serving on {host}:{port}')
+    server = ThreadingHTTPServer((host, args.port), handler)
+    print(f'Serving on {host}:{server.server_port}', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        server.server_close()
 
 
 if __name__ == '__main__':

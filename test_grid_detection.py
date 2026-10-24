@@ -5,6 +5,8 @@ Ports the JS detectBoardGrid logic to Python for offline testing.
 """
 
 import sys
+import tempfile
+from pathlib import Path
 import numpy as np
 from PIL import Image
 
@@ -366,7 +368,7 @@ def build_test_mosaic(img, h_grid, v_grid, detected, image_path):
         # Border
         draw.rectangle([dx, dy + label_height, dx + cell_size, dy + label_height + cell_size], outline=(68, 68, 68))
 
-    out_path = image_path.replace('.png', '_mosaic.png')
+    out_path = Path(tempfile.mkdtemp(prefix='crossplay-grid-')) / f'{Path(image_path).stem}_mosaic.png'
     mosaic.save(out_path)
     print(f"\n  Mosaic saved: {out_path}")
 

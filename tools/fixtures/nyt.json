@@ -1,0 +1,287 @@
+{
+  "_note": "Hand-written synthetic players and abbreviated games, never captured account data. Includes a blank, existing tiles, a swap and passes.",
+  "player": {
+    "player": {
+      "user_id": 1001,
+      "username": "Demo Player"
+    }
+  },
+  "subscription": {
+    "msgs": [
+      {
+        "recent-games": {
+          "games": [
+            {
+              "id": "mockgame01",
+              "game": "crossplay",
+              "game_status": "completed",
+              "players": [
+                {
+                  "id": 1001,
+                  "username": "Demo Player",
+                  "score": 10
+                },
+                {
+                  "id": 1002,
+                  "username": "Demo Cedar",
+                  "score": 4
+                }
+              ],
+              "turn_count": 6,
+              "timestamp": 1792238400,
+              "game_data": {
+                "players": [
+                  {
+                    "id": 1001,
+                    "tray": "AEINRSU",
+                    "plays": [
+                      {
+                        "action": "CAT 8G 5",
+                        "tray": "ACERSTU"
+                      },
+                      {
+                        "action": "s(CAT) 8F 5",
+                        "tray": "?EINRSU"
+                      },
+                      {
+                        "action": "PASS 0",
+                        "tray": "AEINRSU"
+                      }
+                    ]
+                  },
+                  {
+                    "id": 1002,
+                    "tray": "ADEINOR",
+                    "plays": [
+                      {
+                        "action": "(A)RE H8 4",
+                        "tray": "ADEINOR"
+                      },
+                      {
+                        "action": "SWAP 0",
+                        "tray": "ADINOUV",
+                        "swapped_tiles": "UV"
+                      },
+                      {
+                        "action": "PASS 0",
+                        "tray": "ADEINOR"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "mockgame02",
+              "game": "crossplay",
+              "game_status": "completed",
+              "players": [
+                {
+                  "id": 1001,
+                  "username": "Demo Player",
+                  "score": 4
+                },
+                {
+                  "id": 1002,
+                  "username": "Demo River",
+                  "score": 10
+                }
+              ],
+              "turn_count": 6,
+              "timestamp": 1792238400
+            },
+            {
+              "id": "mockactive01",
+              "game": "crossplay",
+              "game_status": "active",
+              "players": [
+                {
+                  "id": 1001,
+                  "username": "Demo Player",
+                  "score": 10
+                },
+                {
+                  "id": 1002,
+                  "username": "Demo Active",
+                  "score": 4
+                }
+              ],
+              "turn_count": 6,
+              "timestamp": 1792238400,
+              "game_data": {
+                "players": [
+                  {
+                    "id": 1001,
+                    "tray": "AEINRSU",
+                    "plays": [
+                      {
+                        "action": "CAT 8G 5",
+                        "tray": "ACERSTU"
+                      },
+                      {
+                        "action": "s(CAT) 8F 5",
+                        "tray": "?EINRSU"
+                      },
+                      {
+                        "action": "PASS 0",
+                        "tray": "AEINRSU"
+                      }
+                    ]
+                  },
+                  {
+                    "id": 1002,
+                    "tray": "ADEINOR",
+                    "plays": [
+                      {
+                        "action": "(A)RE H8 4",
+                        "tray": "ADEINOR"
+                      },
+                      {
+                        "action": "SWAP 0",
+                        "tray": "ADINOUV",
+                        "swapped_tiles": "UV"
+                      },
+                      {
+                        "action": "PASS 0",
+                        "tray": "ADEINOR"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "id": "notcrossplay01",
+              "game": "other-game"
+            }
+          ]
+        }
+      },
+      {
+        "unrelated-message": {}
+      }
+    ]
+  },
+  "details": {
+    "mockgame02": {
+      "id": "mockgame02",
+      "game": "crossplay",
+      "game_status": "completed",
+      "players": [
+        {
+          "id": 1001,
+          "username": "Demo Player",
+          "score": 4
+        },
+        {
+          "id": 1002,
+          "username": "Demo River",
+          "score": 10
+        }
+      ],
+      "turn_count": 6,
+      "timestamp": 1792238400,
+      "game_data": {
+        "players": [
+          {
+            "id": 1001,
+            "tray": "ADEINOR",
+            "plays": [
+              {
+                "action": "(A)RE H8 4",
+                "tray": "ADEINOR"
+              },
+              {
+                "action": "SWAP 0",
+                "tray": "ADINOUV",
+                "swapped_tiles": "UV"
+              },
+              {
+                "action": "PASS 0",
+                "tray": "ADEINOR"
+              }
+            ]
+          },
+          {
+            "id": 1002,
+            "tray": "AEINRSU",
+            "plays": [
+              {
+                "action": "CAT 8G 5",
+                "tray": "ACERSTU"
+              },
+              {
+                "action": "s(CAT) 8F 5",
+                "tray": "?EINRSU"
+              },
+              {
+                "action": "PASS 0",
+                "tray": "AEINRSU"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "mockforeign01": {
+      "id": "mockforeign01",
+      "game": "crossplay",
+      "game_status": "completed",
+      "players": [
+        {
+          "id": 9999,
+          "username": "Demo Player",
+          "score": 10
+        },
+        {
+          "id": 1002,
+          "username": "Demo Stranger",
+          "score": 4
+        }
+      ],
+      "turn_count": 6,
+      "timestamp": 1792238400,
+      "game_data": {
+        "players": [
+          {
+            "id": 9999,
+            "tray": "AEINRSU",
+            "plays": [
+              {
+                "action": "CAT 8G 5",
+                "tray": "ACERSTU"
+              },
+              {
+                "action": "s(CAT) 8F 5",
+                "tray": "?EINRSU"
+              },
+              {
+                "action": "PASS 0",
+                "tray": "AEINRSU"
+              }
+            ]
+          },
+          {
+            "id": 1002,
+            "tray": "ADEINOR",
+            "plays": [
+              {
+                "action": "(A)RE H8 4",
+                "tray": "ADEINOR"
+              },
+              {
+                "action": "SWAP 0",
+                "tray": "ADINOUV",
+                "swapped_tiles": "UV"
+              },
+              {
+                "action": "PASS 0",
+                "tray": "ADEINOR"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

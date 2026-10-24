@@ -57,19 +57,83 @@ Do not put NYT cookies in deployment variables, browser storage, query strings, 
 
 ## Tests
 
-Install the test dependencies and Chromium:
+### Develop and test with fake NYT data
+
+Start the real frontend and local API with a synthetic NYT transport:
+
+```bash
+npm run frontend
+# Open http://127.0.0.1:8000
+```
+
+Enter `mock-nyt-cookie-for-local-testing` in the **NYT-S cookie** field and click
+**Connect**. No real NYT cookie, Supabase account, or network access is needed.
+Two finished games are available to replay and analyze with the bundled Quackle
+engine; an active game is hidden. Fixtures include existing letters, an assigned
+blank, a swap, passes, and a game fetched through the detail endpoint.
+
+The transport replaces only upstream NYT JSON requests. The frontend, HTTP API,
+cookie validation, browser sessions, game summaries, and replay use the normal
+application code. All players, identifiers, and abbreviated games in
+`tools/fixtures/nyt.json` are invented, not captured account data. This exercises
+the local API; Vercel's Google sign-in and Supabase persistence are not emulated.
+
+Other fake cookie values exercise error and empty states:
+
+| Cookie value | Scenario |
+| --- | --- |
+| `mock-empty-cookie-for-local-testing` | Connected account with no recent games |
+| `mock-expired-cookie-for-local-testing` | NYT rejects the cookie (401) |
+| `mock-outage-cookie-for-local-testing` | Connect succeeds; loading games fails (502) |
+
+`npm run frontend -- 8001` selects another port; `PORT` and `HOST` are also
+supported. The default bind address is loopback. Mock mode requires the explicit
+`--mock-nyt` flag and is rejected when `VERCEL` is set. Running
+`python3 crossplay_server.py 8000` without the flag still uses the live NYT API.
+
+### Run presubmit checks
+
+Use Node.js 22+ and Python 3.10+. Install the test dependencies and Chromium:
 
 ```bash
 python3 -m pip install -r requirements-test.txt
 python3 -m playwright install chromium
 ```
 
-Then run the root-level Python tests:
+Bits Code already provides system Chrome, which the browser tests use if
+Playwright's bundled Chromium is unavailable. There are no npm dependencies;
+`npm ci --ignore-scripts` verifies the package lock without downloading packages.
+
+Run the same suite used for GitHub pull requests and pushes:
 
 ```bash
-python3 test_grid_detection.py
-python3 test_score_ocr.py
-python3 test_browser_pipeline.py
+npm test
+```
+
+Individual suites are available as `npm run test:api` (standard-library HTTP API
+and upstream transport tests), `npm run test:review` (Playwright game review and
+real Quackle analysis), and `npm run test:ocr` (existing grid, score OCR, screenshot
+upload, manual board, and engine regressions). API and review tests start and stop
+isolated mock servers on free ports; each browser test uses a fresh context and
+blocks external requests. No service credentials or GitHub secrets are needed.
+
+To run review checks against the interactive dev server instead:
+
+```bash
+# Keep npm run frontend running in another terminal.
+CROSSPLAY_TEST_BASE_URL=http://127.0.0.1:8000 npm run test:review
+```
+
+For agent-driven exploration, use the `playwright-cli` skill with that server,
+then navigate and connect through the visible form:
+
+```bash
+playwright-cli open http://127.0.0.1:8000 --browser=chrome
+playwright-cli snapshot
+# Click the NYT-S textbox ref from the snapshot, then:
+playwright-cli type "mock-nyt-cookie-for-local-testing"
+# Click Connect, then a finished game; use snapshot to inspect current refs.
+playwright-cli close
 ```
 
 Keep local `.env` files, HAR captures, and account game data out of commits. Those files are ignored by Git.
