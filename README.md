@@ -81,7 +81,7 @@ they do not change OCR or grid checks. RUM privacy and trace-routing checks
 run with `npm run test:rum`.
 
 The Datadog Code Security workflow runs the official SAST and SCA actions on
-pushes, pull requests, manual dispatch, and weekly. SAST uses the Python and
+pull requests, manual dispatch, and weekly. SAST uses the Python and
 JavaScript security rules in `static-analysis.datadog.yml`; SCA scans dependency
 manifests. SCA still runs if SAST fails. Without the repository secrets
 (including fork pull requests), Python tests run without Datadog and security
@@ -188,7 +188,7 @@ Bits Code already provides system Chrome, which the browser tests use if
 Playwright's bundled Chromium is unavailable. There are no npm dependencies;
 `npm ci --ignore-scripts` verifies the package lock without downloading packages.
 
-Run the same suite used for GitHub pull requests and pushes:
+Run the same suite used for GitHub pull requests:
 
 ```bash
 npm test
