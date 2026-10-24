@@ -11,8 +11,16 @@ jobs:
     # Playwright 1.57 supports Ubuntu 24.04; ubuntu-latest is moving to 26.04.
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      DD_API_KEY: ${{ secrets.DD_API_KEY }}
+      DD_SITE: datadoghq.com
+      DD_SERVICE: crossplay-analyzer
+      DD_ENV: ci
+      DD_CIVISIBILITY_AGENTLESS_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -24,4 +32,15 @@ jobs:
       - run: python -m pip install -r requirements-test.txt
       - run: python -m playwright install --with-deps chromium
       - run: npm ci --ignore-scripts
-      - run: npm test
+      - name: Install Datadog pipeline instrumentation
+        if: env.DD_API_KEY != ''
+        run: npm install --global @datadog/datadog-ci@4
+      - name: Run tests with Datadog
+        if: env.DD_API_KEY != ''
+        env:
+          PYTEST_ADDOPTS: --ddtrace
+        run: >-
+          datadog-ci trace --name "Regression tests" -- npm test
+      - name: Run tests without Datadog credentials
+        if: env.DD_API_KEY == ''
+        run: npm test

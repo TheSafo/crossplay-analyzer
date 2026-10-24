@@ -7,6 +7,8 @@
     "test:sharing": "python3 -m unittest -v test_game_sharing",
     "test:review": "python3 -m unittest -v test_review_browser",
     "test:ocr": "python3 test_grid_detection.py && python3 test_score_ocr.py && python3 test_browser_pipeline.py",
-    "test": "npm run test:api && npm run test:sharing && npm run test:review && npm run test:ocr"
+    "test:rum": "node --test test_datadog_rum.js",
+    "test:python": "python3 -m pytest -v test_cli_regressions.py test_crossplay_api.py test_game_sharing.py test_review_browser.py test_browser_pipeline.py",
+    "test": "npm run test:rum && npm run test:python"
   }
 }

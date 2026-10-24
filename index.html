@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="datadog-rum.js"></script>
 <meta name="description" content="Review completed NYT Crossplay games, replay turns, and compare plays with Quackle. Analyze screenshots or enter a board manually.">
 <meta name="referrer" content="no-referrer">
 <title>Crossplay Board Analyzer — Game Review</title>
@@ -176,7 +177,7 @@
         <button id="forgetButton" class="danger-button hidden" type="button">Forget cookie</button>
       </div>
     </div>
-    <form id="cookieForm" class="account-form">
+    <form id="cookieForm" class="account-form" data-dd-privacy="hidden">
       <input id="cookieInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"
         aria-label="NYT-S cookie" placeholder="Paste your NYT-S session cookie">
       <button id="saveCookieButton" type="submit">Connect</button>

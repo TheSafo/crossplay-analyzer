@@ -20,6 +20,86 @@ Hosted links persist in Supabase. Apply all migrations in `supabase/migrations/`
 
 The screenshot parser is at `/screenshot.html` and the manual board page is at `/manual.html`. Screenshot parsing and the bundled Quackle engine run locally in the browser.
 
+## Datadog
+
+All integrations target the US1 site, `datadoghq.com`, with service
+`crossplay-analyzer`. Browser monitoring uses environment `production`; tests
+use `ci`.
+
+### Browser RUM and Error Tracking
+
+1. Create a **Browser** RUM application in Datadog. In the shared
+   `datadog-rum.js` file, replace both public placeholder values:
+   - `REPLACE_WITH_DATADOG_RUM_APPLICATION_ID`: the RUM application ID.
+   - `REPLACE_WITH_DATADOG_RUM_CLIENT_TOKEN`: the RUM client token.
+2. Redeploy. `index.html`, `screenshot.html`, and `manual.html` load that shared
+   file, which loads the US1 Browser RUM v6 SDK asynchronously from Datadog's
+   CDN. Until **both** placeholders are filled, it loads no SDK and sends no
+   telemetry. Allow `www.datadoghq-browser-agent.com` and Datadog US1 RUM intake
+   in any deployment content security policy or network allow list.
+3. Verify page views, resources, and browser errors in RUM / Error Tracking.
+
+The application ID and client token are public browser configuration. **Never
+put `DD_API_KEY` or `DD_APP_KEY` in frontend files.** Session Replay is disabled
+(`sessionReplaySampleRate: 0`), `defaultPrivacyLevel: 'mask'` masks all content
+and inputs, and the NYT-S form has `data-dd-privacy="hidden"` as an additional
+protection. Do not add cookies, request headers/bodies, or authentication data
+to RUM context or error messages. Screenshot processing and Quackle remain
+local; configured RUM sends browser diagnostics to Datadog.
+
+RUM injects Datadog and W3C trace context only into same-origin
+`/api/crossplay` and `/api/crossplay/...` requests. Other origins, including
+NYTimes and Supabase, do not receive these tracing headers. To see linked
+backend spans, the deployed API must also have Datadog APM ingestion configured
+and extract this incoming trace context; the browser configuration alone does
+not create backend traces. Backend APM deployment setup is separate from this
+repository's browser and CI instrumentation.
+
+### GitHub Actions: pipelines, Test Optimization, and Code Security
+
+Add these **repository Actions secrets** from the same Datadog organization:
+
+| Secret | Required for |
+| --- | --- |
+| `DD_API_KEY` | Agentless Python test reporting, pipeline custom spans, SAST, and SCA |
+| `DD_APP_KEY` | SAST and SCA, with the Code Security access required by the Datadog actions |
+
+In Datadog, connect this repository through the **GitHub integration**, enable
+**CI Visibility / Pipeline Visibility** for GitHub Actions, and enable **Test
+Optimization** and **Code Security** for the repository. The GitHub integration
+supplies full workflow/job/step events. The API key and `datadog-ci trace`
+custom span in `test.yml` do not replace that integration.
+
+The existing Test workflow runs `npm test`, covering the API, sharing, game
+review, browser pipeline, grid-detection, score-OCR, and RUM checks. The Python
+suites run through pytest, with adapters for the standalone OCR/grid scripts.
+When `DD_API_KEY` is present, `PYTEST_ADDOPTS=--ddtrace` sends individual Python
+test results directly to Datadog, and `datadog-ci trace` adds a regression step
+span to the pipeline. The adapters preserve each script's exit status
+and execute inside pytest so coverage can be associated with each test;
+they do not change OCR or grid checks. RUM privacy and trace-routing checks
+run with `npm run test:rum`.
+
+The Datadog Code Security workflow runs the official SAST and SCA actions on
+pushes, pull requests, manual dispatch, and weekly. SAST uses the Python and
+JavaScript security rules in `static-analysis.datadog.yml`; SCA scans dependency
+manifests. SCA still runs if SAST fails. Without the repository secrets
+(including fork pull requests), Python tests run without Datadog and security
+scans are explicitly skipped. Workflows use `pull_request`, never
+`pull_request_target`, and only request read access to repository contents.
+
+For local validation:
+
+```bash
+npm run frontend                 # mock API/dev server on port 8000
+npm run test:rum                 # no npm dependencies or Datadog credentials
+npm test                         # full Python and RUM presubmit suite
+```
+
+The Python command needs `requirements-test.txt` and a Playwright Chromium
+installation, as described below. Local tests do not upload to Datadog unless
+explicitly instrumented and given credentials.
+
 ## Deploy to Vercel
 
 Vercel serves the HTML and analyzer assets as static files and runs the game-review API as a Python Function. [`vercel.json`](vercel.json) configures the same-origin API route, function region, duration, and bundle exclusions. The function uses `cryptography` from `requirements.txt` to encrypt remembered NYT cookies. Vercel's Python runtime is [generally available](https://vercel.com/changelog/python-on-vercel-is-now-generally-available).

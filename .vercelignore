@@ -6,7 +6,10 @@ QUACKLE_BUILD.md
 
 # Tests, screenshot fixtures, and local tooling
 requirements-test.txt
+package.json
+static-analysis.datadog.yml
 test_*.py
+test_*.js
 test_board.png
 IMG_*.png
 *_debug.png
