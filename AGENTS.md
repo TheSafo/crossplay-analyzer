@@ -22,6 +22,15 @@ Contributor guide for Crossplay Board Analyzer. It can review finished NYT Cross
 
 ## Build, Test, and Development Commands
 
+For frontend testing, use the `playwright-cli` skill against `npm run frontend`.
+This starts the local API with synthetic NYT data. Connect with the fake value
+`mock-nyt-cookie-for-local-testing`; no real credentials are needed. Use
+`npm test` for the full presubmit suite, `npm run test:api` for HTTP API checks,
+or `npm run test:review` for Playwright game-review checks. Review tests manage
+their own server unless `CROSSPLAY_TEST_BASE_URL` points to a running mock server.
+See README.md for empty-account and error scenarios. Do not use real NYT cookies
+for automated tests or capture live account data in fixtures.
+
 Start the local proxy server to use the review page:
 
 ```bash

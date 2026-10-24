@@ -13,6 +13,8 @@ IMG_*.png
 tools/
 .github/
 .playwright-cli/
+package.json
+package-lock.json
 supabase/.temp/
 
 # Local data and credentials

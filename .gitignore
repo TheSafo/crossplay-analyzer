@@ -9,3 +9,5 @@ captures/
 .vercel
 .env*
 supabase/.temp/
+node_modules/
+.playwright-cli/
