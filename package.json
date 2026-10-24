@@ -1,0 +1,7 @@
+{
+  "name": "crossplay-analyzer",
+  "private": true,
+  "scripts": {
+    "frontend": "python3 crossplay_server.py 8000"
+  }
+}
