@@ -16,6 +16,7 @@ memory and sends it to the same-origin API with each request.
     DELETE /api/crossplay/token                forget the saved cookie
     GET    /api/crossplay/games                your recent games (summary rows)
     GET    /api/crossplay/games/<id>/review    a finished game, turn by turn
+    GET    /api/crossplay/shared/<token>       a finished game via its share link
 
 Reviews are only served for completed games, so the tool can't be used to
 look at a game while it is still being played. By default the server binds to
@@ -46,6 +47,7 @@ NYT_BASE = 'https://www.nytimes.com'
 DEFAULT_UA = 'Crossplay/7955 CFNetwork Darwin'
 COLS = 'ABCDEFGHIJKLMNO'
 GAME_ID_RE = re.compile(r'^[a-z0-9]{6,32}$')
+SHARE_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{43}$')
 # RFC 6265 cookie-octet characters; NYT-S values can include '^'.
 COOKIE_RE = re.compile(r'^[\x21\x23-\x2B\x2D-\x3A\x3C-\x5B\x5D-\x7E]{20,4096}$')
 ACROSS_RE = re.compile(r'^(\d{1,2})([A-O])$')
@@ -572,12 +574,73 @@ class Handler(SimpleHTTPRequestHandler):
 
     def saved_game_review(self, user_id, game_id):
         rows = self.supabase_data_request('GET', 'crossplay_games', {
-            'select': 'review',
+            'select': 'review,share_token',
             'user_id': 'eq.' + user_id,
             'nyt_game_id': 'eq.' + game_id,
             'limit': '1',
         })
-        return rows[0].get('review') if rows else None
+        if not rows or not rows[0].get('review'):
+            return None
+        review = dict(rows[0]['review'])
+        review['share_token'] = rows[0].get('share_token')
+        return review
+
+    def game_share_token(self, user_id, game_id):
+        # Only fill an empty token so concurrent requests keep the same URL.
+        params = {'user_id': 'eq.' + user_id, 'nyt_game_id': 'eq.' + game_id}
+        rows = self.supabase_data_request('PATCH', 'crossplay_games', {
+            **params, 'share_token': 'is.null', 'select': 'share_token',
+        }, {'share_token': secrets.token_urlsafe(32)}, 'return=representation')
+        if not rows:
+            rows = self.supabase_data_request('GET', 'crossplay_games', {
+                **params, 'select': 'share_token', 'limit': '1',
+            })
+        if not rows or not rows[0].get('share_token'):
+            raise CrossplayError('Game not found', 404)
+        return rows[0]['share_token']
+
+    def local_game_share_token(self, session_id, review):
+        with Handler.sessions_lock:
+            Handler.purge_sessions(time.time())
+            session = Handler.sessions.get(session_id)
+            if not session:
+                raise CrossplayError('Connect your NYT cookie again to share this game.', 409)
+            shares = session.setdefault('shared_reviews', {})
+            for token, saved in shares.items():
+                if saved['id'] == review['id']:
+                    return token
+            if len(shares) >= 256:
+                raise CrossplayError('This local session has reached its shared game limit.', 503)
+            token = secrets.token_urlsafe(32)
+            shares[token] = dict(review)
+            return token
+
+    def shared_game_review(self, token):
+        if not SHARE_TOKEN_RE.fullmatch(token):
+            raise CrossplayError('Shared game not found. Check the link with its sender.', 404)
+        review = None
+        if os.environ.get('VERCEL'):
+            rows = self.supabase_data_request('GET', 'crossplay_games', {
+                'select': 'user_id,nyt_game_id,review',
+                'share_token': 'eq.' + token,
+                'limit': '1',
+            })
+            if rows and isinstance(rows[0].get('review'), dict):
+                review = dict(rows[0]['review'])
+                if review.get('status') == 'completed':
+                    review['stored_analysis'] = self.saved_game_analysis(rows[0]['user_id'], rows[0]['nyt_game_id'])
+        else:
+            with Handler.sessions_lock:
+                Handler.purge_sessions(time.time())
+                for session in Handler.sessions.values():
+                    saved = session.get('shared_reviews', {}).get(token)
+                    if saved:
+                        review = dict(saved)
+                        break
+        if not review or review.get('status') != 'completed':
+            raise CrossplayError('Shared game not found. Check the link with its sender.', 404)
+        review['share_token'] = token
+        return review
 
     def saved_game_analysis(self, user_id, game_id):
         rows = self.supabase_data_request('GET', 'game_analyses', {
@@ -713,6 +776,11 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.same_origin_request(method):
             return self.send_json(403, {'error': 'The API only accepts same-origin requests'})
         try:
+            match = re.fullmatch(r'shared(?:/([^/]*))?', route)
+            if match:
+                if method != 'GET':
+                    return self.send_json(405, {'error': 'Shared games are read-only'})
+                return self.send_json(200, self.shared_game_review(match.group(1) or ''))
             if route == 'status' and method == 'GET':
                 if os.environ.get('VERCEL'):
                     user = self.current_supabase_user(required=False)
@@ -734,7 +802,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.handle_persistent_api(method, route)
             if method != 'GET':
                 return self.send_json(405, {'error': 'Method not allowed'})
-            _, client = self.current_session()
+            session_id, client = self.current_session()
             if client is None:
                 return self.send_json(409, {'error': 'Paste your NYT-S cookie first'})
             me = client.me()
@@ -748,7 +816,9 @@ class Handler(SimpleHTTPRequestHandler):
                 game_id = match.group(1).lower()
                 if not GAME_ID_RE.match(game_id):
                     return self.send_json(400, {'error': 'Invalid game ID'})
-                return self.send_json(200, game_review(client.game(game_id), me['user_id']))
+                review = game_review(client.game(game_id), me['user_id'])
+                review['share_token'] = self.local_game_share_token(session_id, review)
+                return self.send_json(200, review)
             return self.send_json(404, {'error': 'Unknown endpoint'})
         except CrossplayError as e:
             return self.send_json(e.status, {'error': str(e)})
@@ -786,6 +856,10 @@ class Handler(SimpleHTTPRequestHandler):
                 me = client.me()
                 review = game_review(client.game(game_id), me['user_id'])
                 self.upsert_game_review(user_id, review)
+            if review.get('status') != 'completed':
+                raise CrossplayError('Only finished games can be reviewed', 403)
+            if not review.get('share_token'):
+                review['share_token'] = self.game_share_token(user_id, game_id)
             review['stored_analysis'] = self.saved_game_analysis(user_id, game_id)
             return self.send_json(200, review)
         match = re.match(r'^games/([^/]+)/analysis$', route)

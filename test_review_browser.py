@@ -104,6 +104,9 @@ class ReviewBrowserTest(unittest.TestCase):
         self.page.get_by_role('button', name='Refresh', exact=True).click()
         expect(self.page.locator('.game-card')).to_have_count(2)
         self.page.reload()
+        expect(self.page.get_by_role('heading', name='Demo Player vs Demo Cedar', exact=True)).to_be_visible()
+        expect(self.page.locator('#sharedBanner')).to_be_visible()
+        self.page.get_by_role('link', name='View your games', exact=True).click()
         expect(self.page.locator('#connectionState')).to_have_text('NYT connected as Demo Player')
         expect(self.page.locator('.game-card')).to_have_count(2)
         cookies = self.context.cookies()
@@ -117,6 +120,31 @@ class ReviewBrowserTest(unittest.TestCase):
         expect(self.page.locator('.game-card')).to_have_count(0)
         self.page.reload()
         expect(self.page.locator('#connectionState')).to_contain_text('Not connected')
+
+    def test_guest_can_replay_shared_game_until_owner_forgets_cookie(self):
+        self.open_game()
+        share_url = self.page.get_by_role('textbox', name='Shareable game link').input_value()
+        guest_context = self.browser.new_context(service_workers='block')
+        self.addCleanup(guest_context.close)
+        guest_context.route('**/*', self.route_request)
+        guest = guest_context.new_page()
+        guest.on('pageerror', lambda error: self.page_errors.append(str(error)))
+        shared_requests = []
+        guest.on('request', lambda request: shared_requests.append(request)
+                 if '/api/crossplay/shared/' in request.url else None)
+        guest.goto(share_url)
+        expect(guest.get_by_role('heading', name='Demo Player vs Demo Cedar', exact=True)).to_be_visible()
+        expect(guest.locator('.account')).to_be_hidden()
+        expect(guest.locator('.turn-row')).to_have_count(6)
+        guest.get_by_role('combobox', name='Select game turn').select_option('0')
+        expect(guest.locator('.board .tile')).to_have_count(3)
+        self.assertEqual(len(shared_requests), 1)
+        for header in ('authorization', 'x-nyt-s', 'cookie'):
+            self.assertNotIn(header, shared_requests[0].all_headers())
+        self.page.get_by_role('button', name='Forget cookie', exact=True).click()
+        expect(self.page.locator('#connectionState')).to_contain_text('Cookie forgotten')
+        guest.reload()
+        expect(guest.locator('#reviewPanel')).to_contain_text('Shared game not found')
 
     def test_review_detail_fallback(self):
         self.connect()

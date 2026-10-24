@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Review completed NYT Crossplay games, replay turns, and compare plays with Quackle. Analyze screenshots or enter a board manually.">
+<meta name="referrer" content="no-referrer">
 <title>Crossplay Board Analyzer — Game Review</title>
 <style>
   * { box-sizing: border-box; }
@@ -54,6 +55,13 @@
   .review-heading { align-items: flex-start; margin-bottom: 12px; }
   .opponent-label { margin-top: 4px; color: #9ba6b7; }
   .scoreline { padding: 9px 12px; border-radius: 7px; background: #101a32; color: #fff; white-space: nowrap; font-size: 1.05rem; font-weight: 700; }
+  .share-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+  .share-url { flex: 1; min-width: 0; padding: 8px; border: 1px solid #3a4760; border-radius: 6px; background: #101a32; color: #b9c8db; }
+  .share-note { margin: 0 0 14px; }
+  .shared-game .account, .shared-game .games-panel { display: none; }
+  .shared-game .workspace { grid-template-columns: minmax(0, 1fr); }
+  .shared-banner { margin-bottom: 18px; color: #b9c8db; }
+  .shared-banner a { margin-left: 8px; }
   .review-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 270px); gap: 14px; align-items: start; }
   .turn-panel { min-width: 0; }
   .turn-controls { justify-content: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
@@ -180,6 +188,8 @@
     <p class="account-help">Google sign-in identifies your account here and does not connect other Google services; you still connect your NYT account separately. On Vercel, a remembered NYT-S value is encrypted before saving and can be removed with Forget cookie. Locally, the server keeps it in memory. Use the value of the NYT-S cookie from a signed-in NYTimes browser session. See our <a href="privacy.html">Privacy Policy</a>.</p>
   </section>
 
+  <div id="sharedBanner" class="shared-banner hidden">Shared game · No sign-in needed. <a href="./">View your games</a></div>
+
   <div class="workspace">
     <section class="panel games-panel" aria-label="Recent games">
       <div class="section-heading">
@@ -236,6 +246,8 @@ let activeNytCookie = '';
 let persistenceEnabled = false;
 let signedInUser = null;
 let nytConfigured = false;
+let viewingSharedGame = false;
+let reviewRequestToken = 0;
 const ANALYSIS_VERSION = 'quackle-equity-v1';
 
 const byId = id => document.getElementById(id);
@@ -254,13 +266,15 @@ function setConnection(message, state = '') {
 }
 
 async function api(path, options = {}) {
-  const headers = { ...(options.headers || {}) };
-  const accessToken = await window.CrossplayAuth.accessToken();
+  const { publicRequest = false, ...requestOptions } = options;
+  const headers = { ...(requestOptions.headers || {}) };
+  const accessToken = publicRequest ? null : await window.CrossplayAuth.accessToken();
   if (accessToken) headers.Authorization = 'Bearer ' + accessToken;
-  if (activeNytCookie) headers['X-NYT-S'] = activeNytCookie;
+  if (!publicRequest && activeNytCookie) headers['X-NYT-S'] = activeNytCookie;
   const response = await fetch('/api/crossplay/' + path, {
     cache: 'no-store',
-    ...options,
+    ...requestOptions,
+    ...(publicRequest ? { credentials: 'omit' } : {}),
     headers
   });
   let data = {};
@@ -312,6 +326,7 @@ function showNytDisconnected(message, state = '') {
 }
 
 function clearAccountUi(message) {
+  reviewRequestToken++;
   trendRequestToken++;
   moveQualityRequestToken++;
   trendResults = null;
@@ -380,7 +395,17 @@ function renderGames() {
   }
 }
 
-async function openGame(gameId) {
+function gameShareUrl(token) {
+  const url = new URL(location.pathname, location.origin);
+  url.searchParams.set('game', token);
+  return url;
+}
+
+async function openGame(gameId, { shareToken = null } = {}) {
+  const requestToken = ++reviewRequestToken;
+  viewingSharedGame = shareToken !== null;
+  document.body.classList.toggle('shared-game', viewingSharedGame);
+  byId('sharedBanner').classList.toggle('hidden', !viewingSharedGame);
   trendRequestToken++;
   trendResults = null;
   moveQualityRequestToken++;
@@ -391,7 +416,14 @@ async function openGame(gameId) {
   currentReview = null;
   byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'Loading game review…'));
   try {
-    currentReview = await api('games/' + encodeURIComponent(gameId) + '/review');
+    const review = viewingSharedGame
+      ? await api('shared/' + encodeURIComponent(shareToken), { publicRequest: true })
+      : await api('games/' + encodeURIComponent(gameId) + '/review');
+    if (requestToken !== reviewRequestToken) return;
+    currentReview = review;
+    activeGameId = review.id;
+    const url = gameShareUrl(review.share_token);
+    if (url.href !== location.href) history.pushState({}, '', url);
     const stored = currentReview.stored_analysis;
     if (stored && stored.version === ANALYSIS_VERSION) {
       trendResults = stored.win_trend || null;
@@ -401,12 +433,13 @@ async function openGame(gameId) {
     renderGames();
     renderReview();
   } catch (error) {
+    if (requestToken !== reviewRequestToken) return;
     byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', error.message));
   }
 }
 
 async function persistCompletedAnalysis() {
-  if (!persistenceEnabled || !signedInUser || !currentReview) return null;
+  if (viewingSharedGame || !persistenceEnabled || !signedInUser || !currentReview) return null;
   const payload = { analysis_version: ANALYSIS_VERSION };
   if (trendResults && trendResults.state === 'done') payload.win_trend = trendResults;
   if (moveQualityResults && moveQualityResults.state === 'done') payload.move_quality = moveQualityResults;
@@ -495,11 +528,35 @@ function renderReview() {
   root.replaceChildren();
   const header = makeElement('div', 'review-heading');
   const title = document.createElement('div');
-  title.append(makeElement('h2', '', 'vs ' + (review.opponent || 'Opponent')));
+  title.append(makeElement('h2', '', (viewingSharedGame ? (review.my_name || 'Player') + ' vs ' : 'vs ') + (review.opponent || 'Opponent')));
   title.append(makeElement('div', 'opponent-label', formatDate(review.timestamp) + ' · ' + review.turns.length + ' turns'));
   header.append(title);
   header.append(makeElement('div', 'scoreline', String(review.my_score ?? '—') + '  –  ' + String(review.opponent_score ?? '—')));
   root.append(header);
+
+  const shareTools = makeElement('div', 'share-tools');
+  const shareUrl = makeElement('input', 'share-url');
+  shareUrl.type = 'text';
+  shareUrl.readOnly = true;
+  shareUrl.value = gameShareUrl(review.share_token).href;
+  shareUrl.setAttribute('aria-label', 'Shareable game link');
+  shareUrl.addEventListener('focus', () => shareUrl.select());
+  const copyButton = makeElement('button', '', 'Copy game link');
+  copyButton.type = 'button';
+  const shareNote = makeElement('p', 'muted share-note', 'Anyone with this link can view this finished game, including player names, racks, and analysis.');
+  shareNote.setAttribute('role', 'status');
+  copyButton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl.value);
+      copyButton.textContent = 'Link copied';
+    } catch (_) {
+      shareUrl.focus();
+      shareUrl.select();
+      shareNote.textContent = 'Copy the selected link to share this game.';
+    }
+  });
+  shareTools.append(shareUrl, copyButton);
+  root.append(shareTools, shareNote);
 
   const dashboard = makeElement('section', 'dashboard');
   dashboard.append(makeDashboardStats(review));
@@ -1393,6 +1450,11 @@ byId('signOutButton').addEventListener('click', async () => {
 byId('refreshButton').addEventListener('click', () => loadGames({ refresh: true }));
 
 async function start() {
+  const url = new URL(location.href);
+  if (url.searchParams.has('game')) {
+    await openGame(null, { shareToken: url.searchParams.get('game') });
+    return;
+  }
   let authError = null;
   try {
     await window.CrossplayAuth.initialize();
@@ -1448,6 +1510,7 @@ async function start() {
   }
 }
 
+window.addEventListener('popstate', () => location.reload());
 start();
 </script>
 </body>

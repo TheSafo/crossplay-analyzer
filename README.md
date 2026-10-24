@@ -14,6 +14,10 @@ Open [http://localhost:8000](http://localhost:8000). On the game review page, pa
 
 The recent games list comes from NYT's Crossplay service and only completed games can be reviewed. NYT may change its service endpoints or session requirements.
 
+Opening a finished game puts its shareable URL in the address bar. Send that URL to a friend, or use **Copy game link**. Anyone with the link can replay that game and view player names, scores, racks, and saved analysis without signing in or connecting an NYT account. Links use a random token and grant access only to that game. Guests can run Quackle in their own browser; their analysis does not change the owner's saved results.
+
+Hosted links persist in Supabase. Apply all migrations in `supabase/migrations/` before deploying this feature. Local links last until the owner's local session expires, its cookie is forgotten or replaced, or the server restarts; recipients must be able to reach the server's address. For synthetic data without real credentials, use `npm run frontend` as described under Tests.
+
 The screenshot parser is at `/screenshot.html` and the manual board page is at `/manual.html`. Screenshot parsing and the bundled Quackle engine run locally in the browser.
 
 ## Deploy to Vercel
@@ -111,7 +115,8 @@ npm test
 ```
 
 Individual suites are available as `npm run test:api` (standard-library HTTP API
-and upstream transport tests), `npm run test:review` (Playwright game review and
+and upstream transport tests), `npm run test:sharing` (local and persisted sharing
+authorization checks), `npm run test:review` (Playwright game review and
 real Quackle analysis), and `npm run test:ocr` (existing grid, score OCR, screenshot
 upload, manual board, and engine regressions). API and review tests start and stop
 isolated mock servers on free ports; each browser test uses a fresh context and
