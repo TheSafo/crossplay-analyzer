@@ -1,3 +1,6 @@
 rulesets:
   - python-security
-  - javascript-security
+  # JavaScript security checks use separate shared, browser, and Node.js rulesets.
+  - javascript-common-security
+  - javascript-browser-security
+  - javascript-node-security
