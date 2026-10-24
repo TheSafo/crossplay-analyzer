@@ -1,7 +1,8 @@
 name: Datadog Code Security
 
+# Datadog Code Security rejects pull_request events. Use push for branch updates.
 on:
-  pull_request:
+  push:
   workflow_dispatch:
   schedule:
     - cron: "0 8 * * 1"

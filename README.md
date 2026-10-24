@@ -81,12 +81,15 @@ they do not change OCR or grid checks. RUM privacy and trace-routing checks
 run with `npm run test:rum`.
 
 The Datadog Code Security workflow runs the official SAST and SCA actions on
-pull requests, manual dispatch, and weekly. SAST uses the Python and
-JavaScript security rules in `static-analysis.datadog.yml`; SCA scans dependency
-manifests. SCA still runs if SAST fails. Without the repository secrets
-(including fork pull requests), Python tests run without Datadog and security
-scans are explicitly skipped. Workflows use `pull_request`, never
-`pull_request_target`, and only request read access to repository contents.
+pushes, manual dispatch, and weekly. Datadog Code Security rejects
+`pull_request` events, so branch updates use only `push` to avoid duplicate
+scans. The Test workflow continues to run on pull requests. SAST uses the Python
+and JavaScript security rules in `static-analysis.datadog.yml`; SCA scans dependency
+manifests. The test tracer has an exact version in `requirements-test.txt`
+because SCA omits ranged versions. SCA still runs if SAST fails. Without the
+repository secrets (including fork pull requests), Python tests run without Datadog and security
+scans are explicitly skipped. Neither workflow uses `pull_request_target`,
+and both only request read access to repository contents.
 
 For local validation:
 
