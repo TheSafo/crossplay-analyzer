@@ -7,12 +7,16 @@ Review completed NYT Crossplay games, replay turns, and compare plays with Quack
 Use Python 3.10 or newer:
 
 ```bash
-python3 crossplay_server.py 8000
+npm run frontend
 ```
 
 Open [http://localhost:8000](http://localhost:8000). On the game review page, paste the `NYT-S` cookie from a signed-in NYTimes browser session. The local server validates it with NYT and keeps it in memory for that browser's session. Use **Forget cookie** to remove it. After restarting the server, connect again.
 
 The recent games list comes from NYT's Crossplay service and only completed games can be reviewed. NYT may change its service endpoints or session requirements.
+
+Opening a finished game puts its shareable URL in the address bar. Send that URL to a friend, or use **Copy game link**. Anyone with the link can replay that game and view player names, scores, racks, and saved analysis without signing in or connecting an NYT account. Links use a random token and grant access only to that game. Guests can run Quackle in their own browser; their analysis does not change the owner's saved results.
+
+Hosted links persist in Supabase. Apply all migrations in `supabase/migrations/` before deploying this feature. Local links last until the owner's local session expires, its cookie is forgotten or replaced, or the server restarts; recipients must be able to reach the server's address. Without npm, run `python3 crossplay_server.py 8000` directly.
 
 The screenshot parser is at `/screenshot.html` and the manual board page is at `/manual.html`. Screenshot parsing and the bundled Quackle engine run locally in the browser.
 
@@ -70,6 +74,7 @@ Then run the root-level Python tests:
 python3 test_grid_detection.py
 python3 test_score_ocr.py
 python3 test_browser_pipeline.py
+python3 -m unittest test_game_sharing.py
 ```
 
 Keep local `.env` files, HAR captures, and account game data out of commits. Those files are ignored by Git.
