@@ -11,6 +11,7 @@ test_board.png
 IMG_*.png
 *_debug.png
 tools/
+docs/ui-review/
 .github/
 .playwright-cli/
 package.json

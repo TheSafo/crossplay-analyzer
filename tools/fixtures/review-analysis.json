@@ -1,0 +1,16 @@
+{
+  "_note": "Synthetic saved-analysis display fixture for mockgame01; not measured Quackle results. Opponent's larger loss must not affect personal stats or opportunities.",
+  "version": "quackle-equity-v1",
+  "move_quality": {
+    "state": "done",
+    "message": "Move-quality analysis complete · 3 of 6 moves rated.",
+    "points": [
+      {"turnIndex": 0, "mine": true, "action": "CAT 8G 5", "category": "best", "loss": 0.4},
+      {"turnIndex": 1, "mine": false, "action": "(A)RE H8 4", "category": "blunder", "loss": 12.4},
+      {"turnIndex": 2, "mine": true, "action": "s(CAT) 8F 5", "category": "mistake", "loss": 5.6},
+      {"turnIndex": 3, "mine": false, "action": "SWAP 0", "category": "unrated", "loss": null, "reason": "Passes and exchanges are not rated."},
+      {"turnIndex": 4, "mine": true, "action": "PASS 0", "category": "unrated", "loss": null, "reason": "Passes and exchanges are not rated."},
+      {"turnIndex": 5, "mine": false, "action": "PASS 0", "category": "unrated", "loss": null, "reason": "Passes and exchanges are not rated."}
+    ]
+  }
+}

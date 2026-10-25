@@ -9,6 +9,7 @@ import json
 import os
 import unittest
 from contextlib import ExitStack
+from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
@@ -123,6 +124,7 @@ class ReviewBrowserTest(unittest.TestCase):
 
     def test_guest_can_replay_shared_game_until_owner_forgets_cookie(self):
         self.open_game()
+        self.page.locator('.share-details summary').click()
         share_url = self.page.get_by_role('textbox', name='Shareable game link').input_value()
         guest_context = self.browser.new_context(service_workers='block')
         self.addCleanup(guest_context.close)
@@ -169,6 +171,125 @@ class ReviewBrowserTest(unittest.TestCase):
         self.connect(OUTAGE_COOKIE)
         expect(self.page.locator('#gameList')).to_contain_text('NYT returned HTTP 503')
         expect(self.page.locator('#gameCount')).to_have_text('Could not load games')
+
+    def use_saved_analysis(self, analysis=None, **review_changes):
+        """Exercise the saved-analysis API contract with explicitly synthetic data."""
+        if analysis is None:
+            analysis = json.loads((Path(__file__).parent / 'tools/fixtures/review-analysis.json').read_text())
+
+        def review_route(route):
+            response = route.fetch()
+            review = response.json()
+            review.update(review_changes)
+            review['stored_analysis'] = analysis
+            route.fulfill(response=response, json=review)
+
+        self.page.route('**/api/crossplay/games/mockgame01/review', review_route)
+
+    def stat(self, label):
+        return self.page.locator('.dashboard-stat').filter(
+            has=self.page.get_by_text(label, exact=True))
+
+    def test_personal_summary_and_score_replay_without_analysis(self):
+        self.open_game()
+        expect(self.page.locator('.review-heading')).to_contain_text('Won by 6 points')
+        expect(self.page.locator('.score-person').first).to_have_text('You')
+        expect(self.stat('Points per turn')).to_contain_text('3.3')
+        expect(self.stat('Highest-scoring play')).to_contain_text('5 pts')
+        expect(self.stat('Highest-scoring play')).to_contain_text('CAT')
+        expect(self.stat('Best moves').locator('.dashboard-stat-value')).to_have_text('—')
+        expect(self.stat('Avg. equity lost').locator('.dashboard-stat-value')).to_have_text('—')
+        expect(self.page.locator('.quality-empty')).to_be_visible()
+        expect(self.page.locator('.score-point')).to_have_count(6)
+        self.page.locator('.score-point').first.focus()
+        self.page.keyboard.press('Enter')
+        expect(self.page.get_by_role('combobox', name='Select game turn')).to_have_value('0')
+        expect(self.page.locator('.score-point').first).to_be_focused()
+        expect(self.page.locator('.board .tile')).to_have_count(3)
+        expect(self.page.locator('#cookieForm')).to_be_hidden()
+        self.page.get_by_role('button', name='Manage connection', exact=True).click()
+        expect(self.page.locator('#cookieForm')).to_be_visible()
+        expect(self.page.get_by_role('button', name='Manage connection')).to_have_attribute('aria-expanded', 'true')
+
+    def test_saved_quality_excludes_opponent_and_unrated_moves(self):
+        self.use_saved_analysis()
+        self.open_game()
+        expect(self.stat('Best moves').locator('.dashboard-stat-value')).to_have_text('1 / 2')
+        expect(self.stat('Avg. equity lost').locator('.dashboard-stat-value')).to_have_text('3.0')
+        expect(self.stat('Avg. equity lost')).to_contain_text('2 of your 3 turns rated')
+        expect(self.page.locator('.quality-summary')).to_contain_text('1 Best')
+        expect(self.page.locator('.quality-summary')).not_to_contain_text('Blunder')
+        expect(self.page.locator('.quality-summary')).to_contain_text('1 unrated')
+        expect(self.page.locator('.quality-point')).to_have_count(3)
+        expect(self.page.locator('.insight')).to_have_count(1)
+        expect(self.page.locator('.insight')).to_contain_text('Turn 3 · SCAT')
+        expect(self.page.locator('.insight')).to_contain_text('5.6 equity')
+        self.page.locator('.insight').click()
+        expect(self.page.get_by_role('combobox', name='Select game turn')).to_have_value('2')
+        expect(self.page.locator('.turn-meta')).to_contain_text('Mistake')
+        expect(self.page.locator('.board .last-play')).to_have_count(1)
+        self.page.locator('.quality-point').first.focus()
+        self.page.keyboard.press('Space')
+        expect(self.page.get_by_role('combobox', name='Select game turn')).to_have_value('0')
+        expect(self.page.locator('.quality-point').first).to_be_focused()
+        self.page.get_by_role('button', name='Review game against Demo River').click()
+        expect(self.stat('Avg. equity lost').locator('.dashboard-stat-value')).to_have_text('—')
+        expect(self.page.locator('.insight')).to_have_count(0)
+        expect(self.page.locator('.review-heading')).to_contain_text('Lost by 6 points')
+
+    def test_incomplete_and_unrated_analysis_never_implies_perfect_play(self):
+        analysis = {'version': 'quackle-equity-v1', 'move_quality': {
+            'state': 'stopped', 'points': [
+                {'turnIndex': 0, 'category': 'unrated', 'loss': None, 'reason': 'Outside candidates'},
+                {'turnIndex': 1, 'category': 'best', 'loss': 0.0}]}}
+        self.use_saved_analysis(analysis)
+        self.open_game()
+        expect(self.stat('Avg. equity lost').locator('.dashboard-stat-value')).to_have_text('—')
+        expect(self.page.locator('.insights-panel')).to_contain_text('No rated turns yet')
+        expect(self.page.locator('.insights-panel')).to_contain_text('Analysis is incomplete')
+        expect(self.page.locator('.insights-panel')).not_to_contain_text('Every rated move')
+
+    def test_draw_missing_scores_and_final_adjustments(self):
+        self.use_saved_analysis(my_score=14, opponent_score=14)
+        self.open_game()
+        expect(self.page.locator('.review-heading')).to_contain_text('Draw')
+        expect(self.page.locator('.score-point')).to_have_count(7)
+        expect(self.page.locator('.score-point').last).to_have_attribute('aria-label', 'Final score: 14 to 14. Replay turn 6')
+        self.page.unroute('**/api/crossplay/games/mockgame01/review')
+        self.use_saved_analysis(my_score=None, opponent_score=None)
+        self.page.get_by_role('button', name='Review game against Demo Cedar').click()
+        expect(self.page.locator('.review-heading')).to_contain_text('Final scores unavailable')
+        expect(self.page.locator('.review-heading')).not_to_contain_text('Draw')
+        expect(self.page.locator('.score-value').first).to_have_text('—')
+
+    def test_mobile_layout_and_board_fit(self):
+        self.use_saved_analysis()
+        self.open_game()
+        for width in (320, 390, 768, 1024, 1440):
+            with self.subTest(width=width):
+                self.page.set_viewport_size({'width': width, 'height': 900})
+                self.assertTrue(self.page.evaluate(
+                    'document.documentElement.scrollWidth <= window.innerWidth'),
+                    'The page must not scroll horizontally')
+                board = self.page.locator('.board-scroll')
+                self.assertTrue(board.evaluate('(el) => el.scrollWidth <= el.clientWidth'),
+                                'The complete board must fit the viewport')
+                expect(self.page.get_by_role('button', name='Re-analyze moves')).to_be_visible()
+        self.page.set_viewport_size({'width': 390, 'height': 844})
+        self.page.locator('.insight').click()
+        expect(self.page.get_by_role('combobox', name='Select game turn')).to_have_value('2')
+
+    def test_move_quality_refreshes_summary_with_real_engine(self):
+        self.open_game()
+        self.page.get_by_role('button', name='Analyze move quality', exact=True).click()
+        expect(self.page.locator('.quality-panel .trend-status')).to_contain_text(
+            'Your review is ready', timeout=120_000)
+        expect(self.page.locator('.quality-point')).to_have_count(3)
+        expect(self.page.locator('.quality-summary')).to_contain_text('unrated')
+        expect(self.page.locator('.insights-panel')).to_contain_text('of your 3 turns rated')
+        expect(self.page.get_by_role('button', name='Re-analyze moves', exact=True)).to_be_enabled()
+        # The selected turn is the opponent's final pass; its badge updates too.
+        expect(self.page.locator('.turn-meta .quality-chip')).to_have_text('Unrated')
 
     def test_analyze_turn_with_bundled_quackle(self):
         self.open_game()
