@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="datadog-rum.js"></script>
+<link rel="stylesheet" href="custom-move.css">
+<script src="custom-move.js"></script>
 <meta name="description" content="Review completed NYT Crossplay games, replay turns, and compare plays with Quackle. Analyze screenshots or enter a board manually.">
 <meta name="referrer" content="no-referrer">
 <title>Crossplay Board Analyzer — Game Review</title>
@@ -352,6 +354,7 @@ const TERMINAL_BAG_LIMIT = 21;
 let games = [];
 let activeGameId = null;
 let currentReview = null;
+let customMoveController = null;
 let currentTurnIndex = 0;
 let boardView = 'after';
 let previewBestMove = false;
@@ -452,6 +455,8 @@ function showNytDisconnected(message, state = '') {
 }
 
 function clearAccountUi(message) {
+  if (customMoveController) customMoveController.dispose();
+  customMoveController = null;
   reviewRequestToken++;
   trendRequestToken++;
   moveQualityRequestToken++;
@@ -532,6 +537,8 @@ function gameShareUrl(token) {
 }
 
 async function openGame(gameId, { shareToken = null } = {}) {
+  if (customMoveController) customMoveController.dispose();
+  customMoveController = null;
   const requestToken = ++reviewRequestToken;
   viewingSharedGame = shareToken !== null;
   document.body.classList.toggle('shared-game', viewingSharedGame);
@@ -650,6 +657,8 @@ function renderBoard(grid, action) {
 }
 
 function renderReview() {
+  if (customMoveController) customMoveController.dispose();
+  customMoveController = null;
   if (!currentReview || !Array.isArray(currentReview.turns) || !currentReview.turns.length) {
     byId('reviewPanel').replaceChildren(makeElement('div', 'review-placeholder', 'This game has no turns to review.'));
     return;
@@ -794,6 +803,11 @@ function renderReview() {
   const output = makeElement('div', '');
   analyzeButton.addEventListener('click', () => analyzePosition(turn, analyzeButton, status, output));
   analysis.append(analyzeButton, status, output);
+  customMoveController = new CustomMove(analysis, () => ({
+    gridJson: JSON.stringify(turn.grid), rack: turn.rack,
+    playerScore: Number(turn.mover_score) || 0, opponentScore: Number(turn.other_score) || 0,
+    bagCount: Number(turn.bag_count), finalTurnsRemaining: Number(turn.bag_count) === 0 ? Number(turn.final_turns_remaining) : 0
+  }), 'Try an alternative using the rack and board before this turn, even when it is outside Quackle’s suggestions.');
   body.append(turnPanel);
 
   const sidebar = makeElement('div', 'walkthrough-sidebar');

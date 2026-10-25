@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="datadog-rum.js"></script>
+<link rel="stylesheet" href="custom-move.css">
+<script src="custom-move.js"></script>
 <title>Crossplay Board Analyzer</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -131,6 +133,7 @@
 
   <button id="kibitzBtn" class="hidden" onclick="findBestMoves()">Find Best Moves (Quackle Engine)</button>
   <div id="engineStatus"></div>
+  <div id="customMoveContainer"></div>
 
   <div id="debugSection" class="hidden" style="margin-top:20px;">
     <h3 style="color:#888;cursor:pointer;" onclick="document.getElementById('debugContent').classList.toggle('hidden')">Debug: CV Detection (click to toggle)</h3>
@@ -2166,6 +2169,7 @@ let selectedFinalTurns = null;
 
 for (const input of document.querySelectorAll('input[name="finalTurnState"]')) {
   input.addEventListener('change', event => {
+    customMoveController.reset();
     selectedFinalTurns = Number.parseInt(event.target.value, 10);
     const button = document.getElementById('kibitzBtn');
     button.disabled = false;
@@ -2186,6 +2190,7 @@ function resetQuackleWorker(reason = 'Quackle worker stopped') {
 }
 
 function cancelQuackleRun(status = '') {
+  if (customMoveController) customMoveController.reset();
   quackleRunToken++;
   if (quackleBusy) resetQuackleWorker('Board changed during simulation');
   quackleBusy = false;
@@ -2388,6 +2393,12 @@ function renderMoves(moves, result) {
       `${QUACKLE_SIMULATION_ITERATIONS} samples per move.`;
   container.innerHTML = html + `<p class="hint">${hint}</p>`;
 }
+const customMoveController = new CustomMove(document.getElementById('customMoveContainer'), () => {
+  if (!lastParsed) return null;
+  return { gridJson: JSON.stringify(lastParsed.grid), rack: lastParsed.rack || '',
+    playerScore: lastParsed.player_score || 0, opponentScore: lastParsed.opponent_score || 0,
+    bagCount: lastParsed.bag_count, finalTurnsRemaining: lastParsed.bag_count === 0 ? selectedFinalTurns : 0 };
+});
 </script>
 </body>
 </html>

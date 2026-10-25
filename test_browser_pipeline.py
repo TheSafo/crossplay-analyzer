@@ -456,6 +456,36 @@ class BrowserPipelineTest(unittest.TestCase):
         self.assertEqual(page_errors, [])
         page.close()
 
+    def test_custom_moves_on_manual_and_screenshot_pages(self):
+        for entry in ['manual.html', 'screenshot.html']:
+            with self.subTest(entry=entry):
+                page, page_errors, _ = self.open_page()
+                page.goto(f'{self.base_url}/{entry}', wait_until='domcontentloaded')
+                if entry == 'manual.html':
+                    page.locator('#rackInput').fill('ACERSTU')
+                else:
+                    page.evaluate('''() => {
+                      lastParsed = { grid: Array(15).fill('...............'), rack: 'ACERSTU',
+                        player_score: 0, opponent_score: 0, bag_count: 86 };
+                      renderResult(lastParsed);
+                    }''')
+                page.get_by_role('textbox', name='Custom move word', exact=True).fill('CAT')
+                page.get_by_role('textbox', name='Custom move start square', exact=True).fill('G8')
+                page.get_by_role('button', name='Evaluate move', exact=True).click()
+                page.wait_for_function("document.querySelector('.custom-move-status').textContent === 'Move evaluated.'")
+                row = page.locator('.custom-move-result tbody tr').first
+                self.assertIn('8G CAT', row.inner_text())
+                self.assertEqual(row.locator('td').nth(1).inner_text(), '5')
+                self.assertEqual(row.locator('td').nth(2).inner_text(), 'ERSU')
+                # Editing the position must discard the prior evaluation.
+                if entry == 'manual.html':
+                    page.locator('#p1Score').fill('10')
+                else:
+                    page.evaluate('renderResult(lastParsed)')
+                self.assertEqual(page.locator('.custom-move-result tbody tr').count(), 0)
+                self.assertEqual(page_errors, [])
+                page.close()
+
     def test_compact_header_and_tile_glyph_regressions(self):
         """Check the exact pixels from the reported compact-screen failure.
 
@@ -730,6 +760,33 @@ class BrowserPipelineTest(unittest.TestCase):
             move["samples"] == 277 and move["terminalSamples"] == 277
             for move in result["moves"]
         ))
+        self.assertEqual(page_errors, [])
+        page.close()
+
+    def test_custom_move_terminal_simulation(self):
+        page, page_errors, _ = self.open_page()
+        grid = [
+            '..........G....', '.......A.NOUN.Y', '.......L...TAME',
+            '......YEAH...E.', '.........ab.yA.', '......LOB.OWED.',
+            '..PROG..I.TEN.F', '....D..JOGS...I', '...LASSI.O..RUN',
+            '.......V.R.MI..', '...C...E..HIPS.', '...A.BASE.A.E..',
+            '...R.O..D.V....', '..RENT.LITER...', '.....H..T......',
+        ]
+        result = page.evaluate('''async grid => {
+          if (!await loadQuackleEngine()) throw new Error('Engine did not load');
+          return callQuackleWorker('simulateMove', {
+            gridJson: JSON.stringify(grid), rack: 'WEAFTUO',
+            playerScore: 150, opponentScore: 156, iterations: 1,
+            bagCount: 2, finalTurnsRemaining: 0,
+            customMove: { word: 'OUTWEAR', square: 'D1', direction: 'down' }
+          });
+        }''', grid)
+        self.assertTrue(result['simulated'])
+        self.assertTrue(result['playToEnd'])
+        self.assertEqual(result['selected']['score'], 51)
+        self.assertEqual(result['selected']['samples'], 1)
+        self.assertEqual(result['selected']['terminalSamples'], 1)
+        self.assertEqual(result['simulationMode'], 'play-to-end')
         self.assertEqual(page_errors, [])
         page.close()
 

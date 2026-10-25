@@ -367,7 +367,15 @@ class ReviewBrowserTest(unittest.TestCase):
         expect(self.page.locator('.board .last-play')).to_have_text('S')
         expect(self.page.locator('.board .blank-tile')).to_have_count(0)
         expect(self.page.locator('.board .tile')).to_have_count(6)
+        # Exploring another move must use the original before-turn position,
+        # even while the walkthrough displays Quackle's best-move preview.
+        self.enter_custom_move('sCAT', 'F8')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.', timeout=30_000)
+        expect(self.page.locator('.custom-move-result tbody tr').first.locator('td').nth(1)).to_have_text('5')
+        expect(self.page.locator('.board-preview-note')).to_contain_text('CATS at 8G')
+        expect(self.page.locator('.board .blank-tile')).to_have_count(0)
         self.page.get_by_role('button', name='Return to played move', exact=True).click()
+        expect(self.page.locator('.custom-move-result tbody tr')).to_have_count(0)
         self.assertEqual(self.page.locator('.board').inner_text(), original)
         expect(self.page.locator('.board .blank-tile')).to_have_count(1)
         self.page.get_by_role('button', name='Preview best move', exact=True).click()
@@ -491,6 +499,89 @@ class ReviewBrowserTest(unittest.TestCase):
         expect(self.page.locator('.moves-table tbody tr').first).to_be_visible()
         self.assertGreater(self.page.locator('.moves-table tbody tr').count(), 0)
         expect(self.page.get_by_role('button', name='Analyze this turn', exact=True)).to_be_enabled()
+
+    def enter_custom_move(self, word, square, direction='across'):
+        self.page.get_by_role('textbox', name='Custom move word', exact=True).fill(word)
+        self.page.get_by_role('textbox', name='Custom move start square', exact=True).fill(square)
+        self.page.get_by_role('combobox', name='Custom move direction').select_option(direction)
+        self.page.get_by_role('button', name='Evaluate move', exact=True).click()
+
+    def test_custom_move_outside_shortlist_and_invalid_moves(self):
+        self.open_game()
+        self.page.get_by_role('combobox', name='Select game turn').select_option('0')
+        self.enter_custom_move('CAT', 'G8')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.', timeout=30_000)
+        rows = self.page.locator('.custom-move-result tbody tr')
+        expect(rows.first).to_contain_text('Your move: 8G CAT')
+        expect(rows.first.locator('td').nth(1)).to_have_text('5')
+        expect(rows.first.locator('td').nth(2)).to_have_text('ERSU')
+        rank = self.page.locator('.custom-move-result .custom-move-help').first.inner_text()
+        self.assertGreater(int(rank.split('#')[1].split()[0]), 20)
+        expect(self.page.locator('.custom-move-result')).to_contain_text('Static equity')
+        # The recorded move and after-board remain intact during exploration.
+        expect(self.page.locator('.board .tile')).to_have_count(3)
+        expect(self.page.locator('.turn-action')).to_have_text('Turn 1 · Demo Player · +5')
+        for word, square, message in [
+            ('CAT', 'A1', 'not legal'),
+            ('ZZZ', 'G8', 'rack does not contain'),
+            ('CAT', 'O15', 'runs off the board'),
+            ('CA.', 'G8', 'only on a square'),
+            ('CAT', 'P8', 'start square'),
+            ('C<script>', 'G8', 'Enter a word'),
+        ]:
+            with self.subTest(word=word, square=square):
+                self.enter_custom_move(word, square)
+                expect(self.page.locator('.custom-move-status')).to_contain_text(message)
+                expect(self.page.locator('.custom-move-result tbody tr')).to_have_count(0)
+                expect(self.page.get_by_role('button', name='Evaluate move', exact=True)).to_be_enabled()
+
+    def test_custom_move_existing_tiles_blanks_and_turn_reset(self):
+        self.open_game()
+        turns = self.page.get_by_role('combobox', name='Select game turn')
+        turns.select_option('1')
+        self.enter_custom_move('ARE', 'H8', 'down')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.', timeout=30_000)
+        expect(self.page.locator('.custom-move-result tbody tr').first.locator('td').nth(1)).to_have_text('4')
+        self.enter_custom_move('.RE', 'H8', 'down')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.')
+        self.enter_custom_move('ORE', 'H8', 'down')
+        expect(self.page.locator('.custom-move-status')).to_contain_text('conflicts with an existing tile')
+        turns.select_option('2')
+        expect(self.page.locator('.custom-move-result tbody tr')).to_have_count(0)
+        self.enter_custom_move('sCAT', 'F8')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.', timeout=30_000)
+        expect(self.page.locator('.custom-move-result tbody tr').first.locator('td').nth(1)).to_have_text('5')
+        expect(self.page.locator('.custom-move-result tbody tr').first).to_contain_text('s')
+        self.enter_custom_move('SCAT', 'F8')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.')
+        expect(self.page.locator('.custom-move-result tbody tr').first.locator('td').nth(1)).to_have_text('7')
+        expect(self.page.locator('.custom-move-result tbody tr').first.locator('td').nth(2)).to_contain_text('?')
+        # A single new tile may be written in either direction, even when the
+        # engine describes the resulting word in the perpendicular direction.
+        self.enter_custom_move('s', 'F8', 'down')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.')
+        expect(self.page.locator('.custom-move-result tbody tr').first.locator('td').nth(1)).to_have_text('5')
+
+    def test_custom_move_win_simulation_and_cancellation(self):
+        self.open_game()
+        self.page.get_by_role('combobox', name='Select game turn').select_option('0')
+        self.enter_custom_move('RECUT', 'H8')
+        expect(self.page.locator('.custom-move-status')).to_have_text('Move evaluated.', timeout=30_000)
+        expect(self.page.locator('.custom-move-result')).to_contain_text('Static rank #22')
+        self.page.get_by_role('button', name='Estimate win% (slower)', exact=True).click()
+        expect(self.page.get_by_role('button', name='Evaluate move', exact=True)).to_be_disabled()
+        self.page.get_by_role('button', name='Cancel evaluation', exact=True).click()
+        expect(self.page.locator('.custom-move-status')).to_have_text('Evaluation cancelled.')
+        expect(self.page.get_by_role('button', name='Evaluate move', exact=True)).to_be_enabled()
+        # Retrying starts a fresh worker and includes a move outside the top 20.
+        self.page.get_by_role('button', name='Estimate win% (slower)', exact=True).click()
+        expect(self.page.locator('.custom-move-status')).to_have_text('Win simulation complete.', timeout=120_000)
+        expect(self.page.locator('.custom-move-result')).to_contain_text('277 samples each')
+        expect(self.page.locator('.custom-move-result')).to_contain_text('Sim. equity')
+        expect(self.page.locator('.custom-move-result tbody tr').first).to_contain_text('8H RECUT')
+        self.assertRegex(self.page.locator('.custom-move-result tbody tr').first.locator('td').last.inner_text(), r'^\d+\.\d%$')
+        self.page.get_by_role('combobox', name='Select game turn').select_option('1')
+        expect(self.page.locator('.custom-move-result tbody tr')).to_have_count(0)
 
     def test_frequency_failure_preserves_move_quality_and_can_be_retried(self):
         self.page.route('**/wordfreq-en-25000-log.json',

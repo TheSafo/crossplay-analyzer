@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="datadog-rum.js"></script>
+<link rel="stylesheet" href="custom-move.css">
+<script src="custom-move.js"></script>
 <title>Crossplay Board — Manual Input</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -167,6 +169,7 @@
         </div>
       </div>
       <div id="engineStatus" style="font-size:0.8rem;color:#888;margin-top:4px;"></div>
+      <div id="customMoveContainer"></div>
     </div>
   </div>
 </div>
@@ -562,7 +565,7 @@ function loadSample() {
 }
 
 // ── Listen for meta input changes ───────────────────────────────────────
-document.querySelectorAll('.meta-section input').forEach(inp => {
+document.querySelectorAll('.meta-section input, .meta-section select').forEach(inp => {
   inp.addEventListener('input', updateOutput);
 });
 
@@ -590,6 +593,7 @@ function resetQuackleWorker(reason = 'Quackle worker stopped') {
 }
 
 function cancelQuackleRun(status = '') {
+  if (customMoveController) customMoveController.reset();
   quackleRunToken++;
   if (quackleBusy) resetQuackleWorker('Board changed during simulation');
   quackleBusy = false;
@@ -783,6 +787,12 @@ async function findBestMoves() {
 }
 
 // ── Init ────────────────────────────────────────────────────────────────
+const customMoveController = new CustomMove(document.getElementById('customMoveContainer'), () => {
+  const data = buildJSON();
+  return { gridJson: JSON.stringify(data.grid), rack: data.rack,
+    playerScore: data.player_score, opponentScore: data.opponent_score,
+    bagCount: data.bag_count, finalTurnsRemaining: data.final_turns_remaining };
+});
 buildGrid();
 updateOutput();
 </script>
