@@ -147,6 +147,9 @@
   .replay-heading h2 { font-size: 18px; }
   .replay-heading span { color: var(--muted); font-size: 11px; }
   .review-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .7fr); gap: 18px; align-items: start; }
+  .walkthrough-sidebar { display: grid; gap: 18px; min-width: 0; }
+  .walkthrough-sidebar .turn-coach { margin-bottom: 0; }
+  .review-body > .analysis-panel { grid-column: 1 / -1; margin-top: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; }
   .turn-panel { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
   .turn-controls { justify-content: flex-start; flex-wrap: wrap; margin-bottom: 15px; gap: 6px; }
   .turn-controls button, .turn-controls select { padding: 6px 8px; font-size: 10px; }
@@ -155,6 +158,25 @@
   .turn-action { font-size: 12px; font-weight: 700; }
   .turn-subtitle { margin-top: 5px; color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
   .turn-quality { margin-top: 7px; }
+  .walkthrough-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .walkthrough-progress { margin-right: auto; color: var(--muted); font-size: 11px; }
+  .walkthrough-tools button { padding: 7px 10px; font-size: 11px; }
+  .walkthrough-start { margin-top: 12px; }
+  .turn-coach { margin-bottom: 14px; padding: 14px; border: 1px solid var(--line); border-left: 4px solid #8b978b; border-radius: 8px; background: #fafbf8; }
+  .turn-coach.coach-best { border-left-color: #3d8057; }
+  .turn-coach.coach-inaccuracy { border-left-color: #b39236; }
+  .turn-coach.coach-mistake { border-left-color: #cb8a4c; }
+  .turn-coach.coach-blunder { border-left-color: #bd5d60; }
+  .turn-coach h3 { font-size: 13px; }
+  .turn-coach p { margin: 7px 0; font-size: 11px; line-height: 1.6; }
+  .move-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+  .comparison-move { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: #fff; }
+  .comparison-move span, .comparison-move small { display: block; color: var(--muted); font-size: 10px; }
+  .comparison-move strong { display: block; margin: 5px 0; font-size: 12px; overflow-wrap: anywhere; }
+  .turn-coach button { padding: 7px 10px; font-size: 11px; }
+  .turn-list-filter { display: flex; gap: 6px; align-items: center; margin: 0 4px 12px; color: var(--muted); font-size: 11px; }
+  .turn-list-empty { padding: 12px 4px; color: var(--muted); font-size: 11px; }
+  .board-preview-note { color: #286e4d; font-weight: 650; }
   .board-scroll { overflow: auto; }
   table.board { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 9px; }
   table.board th, table.board td { padding: 0; height: 27px; text-align: center; border-radius: 2px; }
@@ -320,6 +342,8 @@ let activeGameId = null;
 let currentReview = null;
 let currentTurnIndex = 0;
 let boardView = 'after';
+let previewBestMove = false;
+let flaggedMovesOnly = false;
 let trendResults = null;
 let trendRequestToken = 0;
 let moveQualityResults = null;
@@ -505,6 +529,8 @@ async function openGame(gameId, { shareToken = null } = {}) {
   moveQualityRequestToken++;
   moveQualityResults = null;
   boardView = 'after';
+  previewBestMove = false;
+  flaggedMovesOnly = false;
   activeGameId = gameId;
   renderGames();
   currentReview = null;
@@ -672,19 +698,39 @@ function renderReview() {
 
   const replayHeading = makeElement('div', 'replay-heading');
   replayHeading.id = 'replayHeading';
-  replayHeading.append(makeElement('h2', '', 'Replay & reflect'), makeElement('span', '', 'Select a turn to explore the board'));
-  root.append(replayHeading);
+  replayHeading.append(makeElement('h2', '', 'Move-by-move walkthrough'), makeElement('span', '', 'Replay · understand · improve'));
+  root.append(replayHeading, makeWalkthroughTools(review));
   const body = makeElement('div', 'review-body');
+  body.addEventListener('keydown', event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+        event.target.closest('input, select, textarea, [contenteditable]')) return;
+    const destinations = { ArrowLeft: currentTurnIndex - 1, ArrowRight: currentTurnIndex + 1, Home: 0, End: review.turns.length - 1 };
+    if (!(event.key in destinations)) return;
+    event.preventDefault();
+    selectTurn(destinations[event.key], '.turn-controls');
+  });
   const turnPanel = makeElement('div', 'turn-panel');
   const controls = makeElement('div', 'turn-controls');
+  controls.tabIndex = -1;
+  controls.setAttribute('aria-label', 'Walkthrough navigation');
+  const first = makeElement('button', 'first-turn', '⇤ First');
+  first.type = 'button';
+  first.disabled = currentTurnIndex === 0;
+  first.addEventListener('click', () => selectTurn(0, '.first-turn'));
   const previous = makeElement('button', '', '← Previous');
+  previous.className = 'previous-turn';
   previous.type = 'button';
   previous.disabled = currentTurnIndex === 0;
-  previous.addEventListener('click', () => selectTurn(currentTurnIndex - 1));
+  previous.addEventListener('click', () => selectTurn(currentTurnIndex - 1, '.previous-turn'));
   const next = makeElement('button', '', 'Next →');
+  next.className = 'next-turn';
   next.type = 'button';
   next.disabled = currentTurnIndex >= review.turns.length - 1;
-  next.addEventListener('click', () => selectTurn(currentTurnIndex + 1));
+  next.addEventListener('click', () => selectTurn(currentTurnIndex + 1, '.next-turn'));
+  const last = makeElement('button', 'last-turn', 'Last ⇥');
+  last.type = 'button';
+  last.disabled = currentTurnIndex === review.turns.length - 1;
+  last.addEventListener('click', () => selectTurn(review.turns.length - 1, '.last-turn'));
   const select = document.createElement('select');
   select.setAttribute('aria-label', 'Select game turn');
   review.turns.forEach((item, index) => {
@@ -699,9 +745,10 @@ function renderReview() {
   boardToggle.type = 'button';
   boardToggle.addEventListener('click', () => {
     boardView = boardView === 'after' ? 'before' : 'after';
+    previewBestMove = false;
     renderReview();
   });
-  controls.append(previous, select, next, boardToggle);
+  controls.append(first, previous, select, next, last, boardToggle);
   turnPanel.append(controls);
 
   const actor = turn.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent');
@@ -715,12 +762,16 @@ function renderReview() {
   details.push('Bag: ' + turn.bag_count);
   if (turn.swapped_tiles) details.push('Swapped: ' + turn.swapped_tiles);
   meta.append(makeElement('div', 'turn-subtitle', details.join(' · ')));
-  const qualityPoint = moveQualityResults && moveQualityResults.points[currentTurnIndex];
+  const qualityPoint = qualityPointForTurn(currentTurnIndex);
   if (qualityPoint) meta.append(makeQualityBadge(qualityPoint, true));
   turnPanel.append(meta);
   const board = boardView === 'after' && Array.isArray(turn.grid_after) ? turn.grid_after : turn.grid;
-  turnPanel.append(renderBoard(board, turn.action));
-  turnPanel.append(makeElement('div', 'board-legend', (boardView === 'after' ? 'Board after this move.' : 'Board before this move.') + ' Green outline marks newly placed tiles. Lowercase letters are assigned blanks.'));
+  const preview = previewBestMove && candidatePreview(turn, qualityPoint?.bestMove);
+  turnPanel.append(renderBoard(preview ? preview.grid : board, preview ? preview.action : turn.action));
+  turnPanel.append(makeElement('div', 'board-legend' + (preview ? ' board-preview-note' : ''),
+    (preview ? 'Best move preview · ' + qualityPoint.bestMove.word + ' at ' + qualityPoint.bestMove.position + '. Return to played move to continue.'
+      : boardView === 'after' ? 'Board after this move.' : 'Board before this move.') +
+    ' Green outline marks newly placed tiles. Italic letters are assigned blanks.'));
 
   const analysis = makeElement('section', 'panel analysis-panel');
   analysis.append(makeElement('h3', '', 'Quackle analysis for this position'));
@@ -731,36 +782,169 @@ function renderReview() {
   const output = makeElement('div', '');
   analyzeButton.addEventListener('click', () => analyzePosition(turn, analyzeButton, status, output));
   analysis.append(analyzeButton, status, output);
-  turnPanel.append(analysis);
   body.append(turnPanel);
 
-  const turnListPanel = makeElement('aside', 'panel turn-list-panel');
-  turnListPanel.append(makeElement('h3', '', 'Game turns'));
-  const turnList = makeElement('div', 'turn-list');
-  review.turns.forEach((item, index) => {
-    const row = makeElement('button', 'turn-row' + (item.mine ? ' mine' : '') + (index === currentTurnIndex ? ' selected' : ''));
-    row.type = 'button';
-    row.setAttribute('aria-pressed', String(index === currentTurnIndex));
-    const player = makeElement('span', 'turn-player', (index + 1) + '. ' + (item.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent')));
-    const score = makeElement('span', 'turn-score', (item.action || 'Pass').split(' ').slice(0, 2).join(' ') + ' · ' + (item.score >= 0 ? '+' : '') + item.score);
-    row.append(player, score);
-    const point = moveQualityResults && moveQualityResults.points[index];
-    if (point) row.append(makeQualityBadge(point, false, true));
-    row.addEventListener('click', () => selectTurn(index));
-    turnList.append(row);
-  });
-  turnListPanel.append(turnList);
-  body.append(turnListPanel);
+  const sidebar = makeElement('div', 'walkthrough-sidebar');
+  sidebar.append(makeTurnCoach(turn, qualityPoint), makeTurnList(review));
+  body.append(sidebar, analysis);
   root.append(body);
 }
 
-function selectTurn(index) {
+function selectTurn(index, focusSelector) {
   if (!currentReview || index < 0 || index >= currentReview.turns.length) return;
   currentTurnIndex = index;
+  previewBestMove = false;
   renderReview();
   const list = byId('reviewPanel').querySelector('.turn-list-panel');
   const selected = list && list.querySelector('.turn-row.selected');
   if (selected) list.scrollTop = Math.max(0, selected.offsetTop - list.offsetTop - list.clientHeight / 2);
+  if (focusSelector) {
+    const target = byId('reviewPanel').querySelector(focusSelector);
+    (target?.disabled ? byId('reviewPanel').querySelector('.turn-controls') : target)?.focus({ preventScroll: true });
+  }
+}
+
+function qualityPointForTurn(index) {
+  return moveQualityResults?.points?.find(point => point.turnIndex === index);
+}
+
+function flaggedQualityPoints(review) {
+  return personalQualityPoints(review).filter(point => Number.isFinite(point.loss) && point.loss >= 1)
+    .sort((a, b) => a.turnIndex - b.turnIndex);
+}
+
+function makeWalkthroughTools(review) {
+  const tools = makeElement('div', 'walkthrough-tools');
+  const flagged = flaggedQualityPoints(review);
+  const rated = personalQualityPoints(review).filter(point => Number.isFinite(point.loss)).length;
+  tools.append(makeElement('span', 'walkthrough-progress', 'Turn ' + (currentTurnIndex + 1) + ' of ' + review.turns.length +
+    ' · ' + (moveQualityResults ? flagged.length + ' of your moves flagged · ' + rated + ' rated' : 'Analyze move quality to flag mistakes')));
+  for (const [direction, label] of [[-1, '← Previous flagged move'], [1, 'Next flagged move →']]) {
+    const point = direction < 0 ? flagged.filter(point => point.turnIndex < currentTurnIndex).at(-1)
+      : flagged.find(point => point.turnIndex > currentTurnIndex);
+    const button = makeElement('button', direction < 0 ? 'previous-flagged' : 'next-flagged', label);
+    button.type = 'button';
+    button.disabled = !point;
+    button.addEventListener('click', () => selectTurn(point.turnIndex, direction < 0 ? '.previous-flagged' : '.next-flagged'));
+    tools.append(button);
+  }
+  return tools;
+}
+
+function makeTurnList(review) {
+  const panel = makeElement('aside', 'panel turn-list-panel');
+  panel.append(makeElement('h3', '', 'Game turns'));
+  const filter = makeElement('label', 'turn-list-filter');
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = flaggedMovesOnly;
+  checkbox.addEventListener('change', () => {
+    flaggedMovesOnly = checkbox.checked;
+    panel.replaceWith(makeTurnList(review));
+    byId('reviewPanel').querySelector('.turn-list-filter input').focus({ preventScroll: true });
+  });
+  filter.append(checkbox, document.createTextNode('Only your flagged moves'));
+  panel.append(filter);
+  const flagged = new Set(flaggedQualityPoints(review).map(point => point.turnIndex));
+  const list = makeElement('div', 'turn-list');
+  review.turns.forEach((turn, index) => {
+    if (flaggedMovesOnly && !flagged.has(index)) return;
+    const row = makeElement('button', 'turn-row' + (turn.mine ? ' mine' : '') + (index === currentTurnIndex ? ' selected' : ''));
+    row.type = 'button';
+    row.dataset.turnIndex = index;
+    row.setAttribute('aria-pressed', String(index === currentTurnIndex));
+    const player = makeElement('span', 'turn-player', (index + 1) + '. ' + (turn.mine ? (review.my_name || 'You') : (review.opponent || 'Opponent')));
+    const score = makeElement('span', 'turn-score', (turn.action || 'Pass').split(' ').slice(0, 2).join(' ') + ' · ' + (turn.score >= 0 ? '+' : '') + turn.score);
+    row.append(player, score);
+    const point = qualityPointForTurn(index);
+    if (point) row.append(makeQualityBadge(point, false, true));
+    row.addEventListener('click', () => selectTurn(index, '.turn-row.selected'));
+    list.append(row);
+  });
+  if (!list.childNodes.length) list.append(makeElement('p', 'turn-list-empty', !moveQualityResults
+    ? 'Analyze move quality to flag your moves.' : 'No flagged moves among your rated turns so far.'));
+  panel.append(list, makeElement('p', 'analysis-note', 'Use ← / → to step through moves, Home / End for the first / last move.'));
+  return panel;
+}
+
+function makeTurnCoach(turn, point) {
+  const panel = makeElement('section', 'turn-coach coach-' + (point?.category || 'unrated'));
+  panel.setAttribute('aria-label', 'Move explanation');
+  panel.setAttribute('aria-live', 'polite');
+  if (!point) {
+    panel.append(makeElement('h3', '', turn.mine ? 'What could you play here?' : 'Your opponent’s move'));
+    const running = moveQualityResults?.state === 'running';
+    panel.append(makeElement('p', '', running ? 'Review in progress. This turn has not been analyzed yet.'
+      : 'Analyze move quality to see a verdict for this turn and compare it with the engine’s best play.'));
+    if (!running) {
+      const analyze = makeElement('button', 'analysis-button', 'Review all moves');
+      analyze.type = 'button';
+      analyze.addEventListener('click', () => startMoveQuality(currentReview));
+      panel.append(analyze);
+    }
+    return panel;
+  }
+  if (!Number.isFinite(point.loss)) {
+    panel.append(makeElement('h3', '', 'This turn is unrated'), makeElement('p', '', point.reason || 'The played move could not be matched to an engine candidate.'),
+      makeElement('p', 'analysis-note', 'Unrated turns are excluded from mistake counts and averages.'));
+  } else {
+    panel.append(makeElement('h3', '', qualityLabel(point.category) + ' · ' + point.loss.toFixed(1) + ' equity lost'));
+    panel.append(makeElement('p', '', point.category === 'best'
+      ? 'This play is within 1 equity point of Quackle’s best returned candidate.'
+      : 'Quackle found a play worth ' + point.loss.toFixed(1) + ' more equity points from the same board and rack.'));
+  }
+  if (point.bestMove) {
+    const comparison = makeElement('div', 'move-comparison');
+    for (const [label, move, word, score] of [
+      ['Played move', point.playedMove, actionWord(turn.action) || turn.action, turn.score],
+      ['Quackle’s best', point.bestMove, point.bestMove.word, point.bestMove.score]
+    ]) {
+      const card = makeElement('div', 'comparison-move');
+      card.append(makeElement('span', '', label), makeElement('strong', '', word + (move?.position ? ' · ' + move.position : '')),
+        makeElement('small', '', (score ?? '—') + ' points · leave ' + (move?.leave || '—')));
+      if (Number.isFinite(move?.equity)) card.append(makeElement('small', '', move.equity.toFixed(1) + ' equity'));
+      comparison.append(card);
+    }
+    panel.append(comparison);
+    if (candidatePreview(turn, point.bestMove)) {
+      const preview = makeElement('button', 'preview-best-move', previewBestMove ? 'Return to played move' : 'Preview best move');
+      preview.type = 'button';
+      preview.setAttribute('aria-pressed', String(previewBestMove));
+      preview.addEventListener('click', () => {
+        previewBestMove = !previewBestMove;
+        renderReview();
+        byId('reviewPanel').querySelector('.preview-best-move').focus({ preventScroll: true });
+      });
+      panel.append(preview);
+    }
+  } else if (Number.isFinite(point.loss)) {
+    panel.append(makeElement('p', 'analysis-note', 'This saved review has no move comparison. Re-analyze moves to add the best alternative.'));
+  }
+  panel.append(makeElement('p', 'analysis-note', 'Equity weighs points scored and the tiles left on your rack. These provisional grades compare the engine’s returned candidates; they are not win probabilities.'));
+  return panel;
+}
+
+function candidatePreview(turn, move) {
+  const start = movePosition(move?.position);
+  if (!start || typeof move.tiles !== 'string' || !Array.isArray(turn.grid) || turn.grid.length !== 15 ||
+      !turn.grid.every(row => typeof row === 'string' && /^[A-Za-z.]{15}$/.test(row))) return null;
+  const grid = turn.grid.map(row => row.split(''));
+  let row = start.row, col = start.col, word = '', placed = 0;
+  for (const tile of move.tiles) {
+    if (row < 0 || row >= 15 || col < 0 || col >= 15) return null;
+    if (tile === '.') {
+      if (grid[row][col] === '.') return null;
+      word += '(' + grid[row][col] + ')';
+    } else {
+      if (!/^[A-Za-z]$/.test(tile) || grid[row][col] !== '.') return null;
+      grid[row][col] = tile;
+      word += tile;
+      placed++;
+    }
+    row += start.dr;
+    col += start.dc;
+  }
+  return placed ? { grid: grid.map(row => row.join('')), action: word + ' ' + move.position + ' ' + move.score } : null;
 }
 
 function svgElement(name, attrs = {}) {
@@ -914,6 +1098,13 @@ function makeInsightsPanel(review) {
     const count = review.turns.filter(turn => turn.mine).length;
     panel.append(makeElement('p', 'analysis-note', rated.length + ' of your ' + count + ' turns rated. ' + (moveQualityResults.state === 'done' ? 'Unrated turns are excluded from averages and opportunities.' : 'Analysis is incomplete; insights reflect rated turns so far.')));
   }
+  const walkthrough = makeElement('button', 'analysis-button walkthrough-start', 'Start walkthrough');
+  walkthrough.type = 'button';
+  walkthrough.addEventListener('click', () => {
+    selectTurn(0, '.turn-controls');
+    byId('replayHeading').scrollIntoView({ block: 'start', behavior: 'instant' });
+  });
+  panel.append(walkthrough);
   return panel;
 }
 
@@ -1065,16 +1256,20 @@ function refreshMoveQualityPanel() {
   if (currentReview) {
     byId('reviewPanel').querySelector('.dashboard-stats')?.replaceWith(makeDashboardStats(currentReview));
     byId('reviewPanel').querySelector('.insights-panel')?.replaceWith(makeInsightsPanel(currentReview));
+    byId('reviewPanel').querySelector('.walkthrough-tools')?.replaceWith(makeWalkthroughTools(currentReview));
+    const list = byId('reviewPanel').querySelector('.turn-list-panel');
+    if (list) {
+      const scrollTop = list.scrollTop;
+      list.replaceWith(makeTurnList(currentReview));
+      byId('reviewPanel').querySelector('.turn-list-panel').scrollTop = scrollTop;
+    }
+    byId('reviewPanel').querySelector('.turn-coach')?.replaceWith(makeTurnCoach(currentReview.turns[currentTurnIndex], qualityPointForTurn(currentTurnIndex)));
   }
-  const points = moveQualityResults && moveQualityResults.points || [];
-  byId('reviewPanel').querySelectorAll('.turn-row').forEach((row, index) => {
-    row.querySelectorAll('.quality-chip').forEach(node => node.remove());
-    if (points[index]) row.append(makeQualityBadge(points[index], false, true));
-  });
   const meta = byId('reviewPanel').querySelector('.turn-meta');
   if (meta) {
     meta.querySelectorAll('.turn-quality').forEach(node => node.remove());
-    if (points[currentTurnIndex]) meta.append(makeQualityBadge(points[currentTurnIndex], true));
+    const point = qualityPointForTurn(currentTurnIndex);
+    if (point) meta.append(makeQualityBadge(point, true));
   }
 }
 
@@ -1250,6 +1445,10 @@ async function startMoveQuality(review) {
   }
   const token = ++moveQualityRequestToken;
   moveQualityResults = { state: 'running', points: [], current: 0, message: 'Preparing Quackle…' };
+  if (previewBestMove) {
+    previewBestMove = false;
+    renderReview();
+  }
   refreshMoveQualityPanel();
   const turns = review.turns;
   try {
@@ -1263,7 +1462,7 @@ async function startMoveQuality(review) {
       let point;
       if (!validAnalysisTurn(turn)) {
         point = makeUnratedPoint(index, turn, 'Missing a valid board, rack, or bag count.');
-      } else if (!actionWord(turn.action)) {
+      } else if (!parsePlay(turn.action)?.length || !actionWord(turn.action)) {
         point = makeUnratedPoint(index, turn, 'Passes and tile exchanges have no played word to compare.');
       } else {
         const bagCount = Number(turn.bag_count);
@@ -1284,6 +1483,8 @@ async function startMoveQuality(review) {
         }
         const moves = result.moves;
         const candidates = moves.filter(move => Number.isFinite(move.equity));
+        const bestEquity = candidates.length ? Math.max(...candidates.map(move => move.equity)) : null;
+        const bestMove = candidates.find(move => move.equity === bestEquity);
         const playedIndex = findPlayedCandidateIndex(turn, moves, false);
         if (playedIndex < 0) {
           const looseMatch = findPlayedCandidateIndex(turn, moves, true);
@@ -1293,7 +1494,6 @@ async function startMoveQuality(review) {
         } else if (!Number.isFinite(moves[playedIndex].equity) || !candidates.length) {
           point = makeUnratedPoint(index, turn, 'Quackle returned no equity value for the played move.');
         } else {
-          const bestEquity = Math.max(...candidates.map(move => move.equity));
           const loss = Math.max(0, bestEquity - moves[playedIndex].equity);
           point = {
             turnIndex: index,
@@ -1304,10 +1504,12 @@ async function startMoveQuality(review) {
             loss,
             playedEquity: moves[playedIndex].equity,
             bestEquity,
+            playedMove: reviewMove(turn, moves[playedIndex]),
             candidateRank: playedIndex + 1,
             candidateCount: moves.length
           };
         }
+        if (bestMove) point.bestMove = reviewMove(turn, bestMove);
       }
       moveQualityResults.points.push(point);
       moveQualityResults.current = index + 1;
@@ -1330,6 +1532,17 @@ async function startMoveQuality(review) {
 
 function makeUnratedPoint(turnIndex, turn, reason) {
   return { turnIndex, turn: turnIndex + 1, mine: Boolean(turn && turn.mine), action: turn && turn.action, category: 'unrated', loss: null, reason };
+}
+
+function reviewMove(turn, move) {
+  return {
+    word: candidateWord(turn, move) || (move.tiles ? 'Exchange ' + move.tiles : 'Pass'),
+    position: String(move.position || ''),
+    tiles: String(move.tiles || ''),
+    score: move.score,
+    leave: String(move.leave || ''),
+    equity: move.equity
+  };
 }
 
 function workerRequest(type, payload = {}) {
@@ -1559,7 +1772,13 @@ function findPlayedCandidateIndex(turn, moves, allowScoreFallback = true) {
   if (!actual) return -1;
   const actionParts = String(turn.action || '').trim().split(/\s+/);
   const actualPosition = actionParts[1] || '';
-  let index = moves.findIndex(move => candidateWord(turn, move) === actual && String(move.position) === actualPosition);
+  const played = candidatePreview(turn, { position: actualPosition,
+    tiles: actionParts[0].replace(/\(([A-Za-z]+)\)/g, (_, letters) => '.'.repeat(letters.length)), score: turn.score });
+  let index = moves.findIndex(move => {
+    if (!played || Number(move.score) !== Number(turn.score)) return false;
+    const candidate = candidatePreview(turn, move);
+    return candidate && candidate.grid.every((row, index) => row === played.grid[index]);
+  });
   if (index < 0 && allowScoreFallback) {
     index = moves.findIndex(move => String(move.position) === actualPosition && Number(move.score) === Number(turn.score));
   }
