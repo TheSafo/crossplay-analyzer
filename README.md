@@ -16,6 +16,10 @@ The recent games list comes from NYT's Crossplay service and only completed game
 
 Each game review starts with the result and labeled scores, your points per turn and highest-scoring play, and an interactive cumulative-score timeline. Analyze move quality to see your best-move count, average equity loss, and largest rated opportunities; select an opportunity to replay that turn. Personal summaries exclude opponent moves and unrated turns. Partial analysis and rated-turn coverage are labeled. Estimated win chances remain available under **Explore estimated win chances**.
 
+Choose **Start walkthrough** to review the game from the first turn. Step forward or backward, jump to the first or last move, or use the arrow keys and Home/End while focused in the replay. After analyzing move quality, use **Previous flagged move** / **Next flagged move** or **Only your flagged moves** to revisit your inaccuracies, mistakes, and blunders in game order. Opponent moves remain available in the full turn list.
+
+Each analyzed turn explains its grade and, when candidates are available, compares the played move with Quackle’s best candidate, including points, rack leave, and equity. **Preview best move** places the candidate on the board before that turn; **Return to played move** restores the replay. New completed analyses save these comparisons with the game. Older saved grades still work; re-analyze to add comparisons. Grades use provisional equity-loss bands (Best <1, Inaccuracy 1–<3, Mistake 3–<8, Blunder ≥8), rather than win probability. Passes, exchanges, invalid positions, and played moves outside the returned top 15 stay unrated; an available best candidate can still be previewed for an unmatched play.
+
 **Luck & performance** estimates how favorable your racks were compared with
 2,048 reproducible samples of the same size from Crossplay tiles not on the
 board. The tile-flexibility heuristic rewards blanks, S, balanced vowels and

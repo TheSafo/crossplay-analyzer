@@ -92,7 +92,7 @@ class ReviewBrowserTest(unittest.TestCase):
         turns.select_option('0')
         expect(self.page.locator('.turn-action')).to_have_text('Turn 1 · Demo Player · +5')
         expect(self.page.locator('.board .tile')).to_have_count(3)
-        expect(self.page.get_by_role('button', name='← Previous')).to_be_disabled()
+        expect(self.page.get_by_role('button', name='← Previous', exact=True)).to_be_disabled()
         self.page.get_by_role('button', name='Show before move').click()
         expect(self.page.locator('.board .tile')).to_have_count(0)
         self.page.get_by_role('button', name='Show after move').click()
@@ -319,6 +319,149 @@ class ReviewBrowserTest(unittest.TestCase):
         self.page.locator('.insight').click()
         expect(self.page.get_by_role('combobox', name='Select game turn')).to_have_value('2')
 
+    def test_walkthrough_navigation_and_personal_flag_filter(self):
+        self.use_saved_analysis()
+        self.open_game()
+        self.page.get_by_role('button', name='Start walkthrough', exact=True).click()
+        turns = self.page.get_by_role('combobox', name='Select game turn')
+        expect(turns).to_have_value('0')
+        expect(self.page.locator('.turn-coach')).to_contain_text('Best · 0.4 equity lost')
+        expect(self.page.get_by_role('button', name='← Previous flagged move')).to_be_disabled()
+        self.page.get_by_role('button', name='Next flagged move →').click()
+        expect(turns).to_have_value('2')
+        expect(self.page.locator('.turn-coach')).to_contain_text('Mistake · 5.6 equity lost')
+        expect(self.page.get_by_role('button', name='Next flagged move →')).to_be_disabled()
+        self.page.get_by_role('checkbox', name='Only your flagged moves').check()
+        expect(self.page.locator('.turn-row')).to_have_count(1)
+        expect(self.page.locator('.turn-row')).to_contain_text('s(CAT)')
+        expect(self.page.locator('.turn-row .quality-chip')).to_have_text('Mistake')
+        self.page.locator('.turn-row').click()
+        self.page.keyboard.press('ArrowRight')
+        expect(turns).to_have_value('3')
+        expect(self.page.locator('.turn-coach')).to_contain_text('This turn is unrated')
+        self.page.keyboard.press('End')
+        expect(turns).to_have_value('5')
+        self.page.get_by_role('button', name='← Previous flagged move').click()
+        expect(turns).to_have_value('2')
+        self.page.locator('.turn-controls').focus()
+        self.page.keyboard.press('Home')
+        expect(turns).to_have_value('0')
+        self.page.get_by_role('checkbox', name='Only your flagged moves').uncheck()
+        expect(self.page.locator('.turn-row')).to_have_count(6)
+        self.page.get_by_role('button', name='Last ⇥', exact=True).click()
+        expect(turns).to_have_value('5')
+        expect(self.page.get_by_role('button', name='Last ⇥', exact=True)).to_be_disabled()
+
+    def test_best_move_preview_restores_board_and_preserves_existing_tiles(self):
+        self.use_saved_analysis()
+        self.open_game()
+        self.page.locator('.insight').click()
+        comparison = self.page.locator('.move-comparison')
+        expect(comparison).to_contain_text('SCAT · 8F')
+        expect(comparison).to_contain_text('CATS · 8G')
+        expect(comparison).to_contain_text('6 points · leave ?EINRU')
+        original = self.page.locator('.board').inner_text()
+        self.page.get_by_role('button', name='Preview best move', exact=True).click()
+        expect(self.page.locator('.board-preview-note')).to_contain_text('CATS at 8G')
+        expect(self.page.locator('.board .last-play')).to_have_count(1)
+        expect(self.page.locator('.board .last-play')).to_have_text('S')
+        expect(self.page.locator('.board .blank-tile')).to_have_count(0)
+        expect(self.page.locator('.board .tile')).to_have_count(6)
+        self.page.get_by_role('button', name='Return to played move', exact=True).click()
+        self.assertEqual(self.page.locator('.board').inner_text(), original)
+        expect(self.page.locator('.board .blank-tile')).to_have_count(1)
+        self.page.get_by_role('button', name='Preview best move', exact=True).click()
+        self.page.get_by_role('button', name='Show before move', exact=True).click()
+        expect(self.page.locator('.board-preview-note')).to_have_count(0)
+        expect(self.page.locator('.board .tile')).to_have_count(5)
+        self.page.get_by_role('button', name='Preview best move', exact=True).click()
+        self.page.get_by_role('button', name='Next →', exact=True).click()
+        expect(self.page.locator('.board-preview-note')).to_have_count(0)
+        expect(self.page.locator('.board .tile')).to_have_count(6)
+        self.page.get_by_role('button', name='Review game against Demo River').click()
+        expect(self.page.locator('.move-comparison')).to_have_count(0)
+        expect(self.page.get_by_role('checkbox', name='Only your flagged moves')).not_to_be_checked()
+
+    def test_blank_alternative_and_older_saved_review(self):
+        analysis = json.loads((Path(__file__).parent / 'tools/fixtures/review-analysis.json').read_text())
+        analysis['move_quality']['points'][2]['bestMove']['tiles'] = '...s'
+        self.use_saved_analysis(analysis)
+        self.open_game()
+        self.page.locator('.insight').click()
+        self.page.get_by_role('button', name='Preview best move', exact=True).click()
+        expect(self.page.locator('.board .blank-tile.last-play')).to_have_text('S')
+        expect(self.page.locator('.board .last-play')).to_have_count(1)
+        # Old saved analyses and sparse, out-of-order results map by turnIndex.
+        self.page.unroute('**/api/crossplay/games/mockgame01/review')
+        self.use_saved_analysis({'version': 'quackle-equity-v1', 'move_quality': {
+            'state': 'stopped', 'points': [
+                {'turnIndex': 2, 'category': 'blunder', 'loss': 9.5},
+                {'turnIndex': 0, 'category': 'inaccuracy', 'loss': 2.0}]}})
+        self.page.get_by_role('button', name='Review game against Demo Cedar').click()
+        self.page.get_by_role('button', name='Start walkthrough', exact=True).click()
+        expect(self.page.locator('.turn-coach')).to_contain_text('Inaccuracy · 2.0 equity lost')
+        self.page.get_by_role('button', name='Next flagged move →').click()
+        expect(self.page.locator('.turn-coach')).to_contain_text('Blunder · 9.5 equity lost')
+        expect(self.page.locator('.turn-coach')).to_contain_text('Re-analyze moves to add')
+        expect(self.page.get_by_role('button', name='Preview best move', exact=True)).to_have_count(0)
+        self.page.get_by_role('checkbox', name='Only your flagged moves').check()
+        expect(self.page.locator('.turn-row')).to_have_count(2)
+        expect(self.page.locator('.turn-row .quality-chip').last).to_have_text('Blunder')
+
+    def test_grading_saves_comparisons_and_does_not_match_wrong_blank(self):
+        # Deterministic worker replies exercise grading and persistence, separately
+        # from the real WASM tests. All boards and candidates are synthetic.
+        worker = """
+          self.onmessage = ({data: {id, type, payload}}) => {
+            let moves = [];
+            if (type !== 'init') {
+              if (payload.rack === 'ACERSTU') moves = [
+                {position: '8G', tiles: 'ACT', score: 5, leave: 'ERSU', equity: 12},
+                {position: '8G', tiles: 'CAT', score: 5, leave: 'ERSU', equity: 2}];
+              else if (payload.rack === '?EINRSU') moves = [
+                {position: '8F', tiles: 'S...', score: 5, leave: '?EINRU', equity: 10}];
+              else moves = [{position: 'H8', tiles: '.RE', score: 4, leave: 'ADINO', equity: 8}];
+            }
+            self.postMessage({id, result: {simulated: false, moves}});
+          };
+        """
+        self.page.route('**/quackle-worker.js', lambda route: route.fulfill(
+            content_type='application/javascript', body=worker))
+        saved = []
+
+        def save(route):
+            saved.append(route.request.post_data_json)
+            route.fulfill(json={'saved': True})
+
+        self.page.route('**/api/crossplay/games/mockgame01/analysis', save)
+        self.open_game()
+        self.page.evaluate("persistenceEnabled = true; signedInUser = {id: 'synthetic-user'}")
+        self.page.get_by_role('button', name='Analyze move quality', exact=True).click()
+        expect(self.page.locator('.quality-panel .trend-status')).to_contain_text('Your review is ready')
+        self.assertEqual(len(saved), 1)
+        points = saved[0]['move_quality']['points']
+        self.assertEqual(points[0]['category'], 'blunder')
+        self.assertEqual(points[0]['loss'], 10)
+        self.assertEqual(points[0]['bestMove']['word'], 'ACT')
+        self.assertEqual(points[0]['playedMove']['leave'], 'ERSU')
+        # An S tile must not match the assigned blank s used in the actual game.
+        self.assertEqual(points[2]['category'], 'unrated')
+        self.assertIsNone(points[2]['loss'])
+        self.assertEqual(points[2]['bestMove']['tiles'], 'S...')
+        for point in points[3:]:
+            self.assertEqual(point['category'], 'unrated')
+            self.assertIn('Passes and tile exchanges', point['reason'])
+        self.page.get_by_role('button', name='Start walkthrough', exact=True).click()
+        expect(self.page.locator('.turn-coach')).to_contain_text('Blunder · 10.0 equity lost')
+        expect(self.page.locator('.move-comparison')).to_contain_text('ACT · 8G')
+        # Reloading the saved API representation must restore its comparison.
+        self.use_saved_analysis({'version': saved[0]['analysis_version'],
+                                 'move_quality': saved[0]['move_quality']})
+        self.page.get_by_role('button', name='Review game against Demo Cedar').click()
+        self.page.get_by_role('combobox', name='Select game turn').select_option('2')
+        expect(self.page.locator('.turn-coach')).to_contain_text('This turn is unrated')
+        expect(self.page.get_by_role('button', name='Preview best move', exact=True)).to_be_enabled()
+
     def test_move_quality_refreshes_summary_with_real_engine(self):
         self.open_game()
         self.page.get_by_role('button', name='Analyze move quality', exact=True).click()
@@ -330,6 +473,9 @@ class ReviewBrowserTest(unittest.TestCase):
         expect(self.page.get_by_role('button', name='Re-analyze moves', exact=True)).to_be_enabled()
         # The selected turn is the opponent's final pass; its badge updates too.
         expect(self.page.locator('.turn-meta .quality-chip')).to_have_text('Unrated')
+        self.page.get_by_role('button', name='Start walkthrough', exact=True).click()
+        expect(self.page.locator('.move-comparison')).to_be_visible()
+        self.assertTrue(self.page.evaluate('Boolean(moveQualityResults.points[0].bestMove.tiles)'))
         points = self.page.evaluate('moveQualityResults.points')
         word_points = [point for point in points if point['turnIndex'] in (0, 1, 2)]
         self.assertTrue(all(point['opportunity']['version'] == 1 for point in word_points))

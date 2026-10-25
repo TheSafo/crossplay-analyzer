@@ -5,9 +5,13 @@
     "state": "done",
     "message": "Move-quality analysis complete · 3 of 6 moves rated.",
     "points": [
-      {"turnIndex": 0, "mine": true, "action": "CAT 8G 5", "category": "best", "loss": 0.4},
+      {"turnIndex": 0, "mine": true, "action": "CAT 8G 5", "category": "best", "loss": 0.4,
+        "playedMove": {"word": "CAT", "position": "8G", "tiles": "CAT", "score": 5, "leave": "ERSU", "equity": 11.6},
+        "bestMove": {"word": "ACT", "position": "8G", "tiles": "ACT", "score": 5, "leave": "ERSU", "equity": 12.0}},
       {"turnIndex": 1, "mine": false, "action": "(A)RE H8 4", "category": "blunder", "loss": 12.4},
-      {"turnIndex": 2, "mine": true, "action": "s(CAT) 8F 5", "category": "mistake", "loss": 5.6},
+      {"turnIndex": 2, "mine": true, "action": "s(CAT) 8F 5", "category": "mistake", "loss": 5.6,
+        "playedMove": {"word": "SCAT", "position": "8F", "tiles": "s...", "score": 5, "leave": "EINRSU", "equity": 10.0},
+        "bestMove": {"word": "CATS", "position": "8G", "tiles": "...S", "score": 6, "leave": "?EINRU", "equity": 15.6}},
       {"turnIndex": 3, "mine": false, "action": "SWAP 0", "category": "unrated", "loss": null, "reason": "Passes and exchanges are not rated."},
       {"turnIndex": 4, "mine": true, "action": "PASS 0", "category": "unrated", "loss": null, "reason": "Passes and exchanges are not rated."},
       {"turnIndex": 5, "mine": false, "action": "PASS 0", "category": "unrated", "loss": null, "reason": "Passes and exchanges are not rated."}
