@@ -237,6 +237,45 @@ class ReviewBrowserTest(unittest.TestCase):
         expect(self.page.locator('.insight')).to_have_count(0)
         expect(self.page.locator('.review-heading')).to_contain_text('Lost by 6 points')
 
+    def test_luck_panel_without_analysis_and_legacy_saved_analysis(self):
+        self.use_saved_analysis()
+        self.open_game()
+        panel = self.page.locator('.luck-panel')
+        cards = panel.locator('.luck-stat')
+        expect(cards.nth(0)).to_contain_text('3 of your 3 racks estimated')
+        expect(cards.nth(1)).to_contain_text('2 of your 3 turns rated')
+        expect(cards.nth(2).locator('strong')).to_have_text('—')
+        expect(panel).to_contain_text('Re-analyze moves')
+        panel.locator('.luck-breakdown summary').click()
+        expect(panel.locator('tbody tr')).to_have_count(3)
+        panel.get_by_role('button', name='Replay turn 3 from luck breakdown').click()
+        expect(self.page.get_by_role('combobox', name='Select game turn')).to_have_value('2')
+        self.page.get_by_role('button', name='Review game against Demo River').click()
+        expect(self.page.locator('.luck-panel')).to_contain_text('Use Analyze move quality above')
+        expect(self.page.locator('.luck-stat').nth(1).locator('strong')).to_have_text('—')
+
+    def test_saved_word_opportunities_weight_only_eligible_personal_turns(self):
+        analysis = {'version': 'quackle-equity-v1', 'move_quality': {
+            'state': 'stopped', 'points': [
+                {'turnIndex': 0, 'category': 'mistake', 'loss': 10, 'playedEquity': 20,
+                 'opportunity': {'version': 1, 'accessibleEquity': 26, 'bestWord': 'QAT',
+                                 'bestWordZipf': 2, 'knownCandidates': 2, 'candidateCount': 3}},
+                {'turnIndex': 1, 'category': 'best', 'loss': 0, 'playedEquity': 30,
+                 'opportunity': {'version': 1, 'accessibleEquity': 30, 'bestWord': 'CAT',
+                                 'bestWordZipf': 5, 'knownCandidates': 1, 'candidateCount': 1}},
+                {'turnIndex': 2, 'category': 'unrated', 'loss': None}]}}
+        self.use_saved_analysis(analysis)
+        self.open_game()
+        panel = self.page.locator('.luck-panel')
+        expect(panel.locator('.luck-stat').nth(1).locator('strong')).to_have_text('50 / 100')
+        expect(panel.locator('.luck-stat').nth(2).locator('strong')).to_have_text('63 / 100')
+        expect(panel).to_contain_text('1 of your 3 turns weighted · partial analysis')
+        expect(panel).to_contain_text('Word frequency available for 2 of 3 candidate entries')
+        panel.locator('.luck-breakdown summary').click()
+        expect(panel.locator('tbody tr').first).to_contain_text('QAT · Less common')
+        expect(panel.locator('tbody tr').first).to_contain_text('6.0 eq')
+        expect(panel.locator('tbody tr').nth(1)).to_contain_text('Unrated')
+
     def test_incomplete_and_unrated_analysis_never_implies_perfect_play(self):
         analysis = {'version': 'quackle-equity-v1', 'move_quality': {
             'state': 'stopped', 'points': [
@@ -265,6 +304,7 @@ class ReviewBrowserTest(unittest.TestCase):
     def test_mobile_layout_and_board_fit(self):
         self.use_saved_analysis()
         self.open_game()
+        self.page.locator('.luck-breakdown summary').click()
         for width in (320, 390, 768, 1024, 1440):
             with self.subTest(width=width):
                 self.page.set_viewport_size({'width': width, 'height': 900})
@@ -382,7 +422,7 @@ class ReviewBrowserTest(unittest.TestCase):
                 {position: '8F', tiles: 'S...', score: 5, leave: '?EINRU', equity: 10}];
               else moves = [{position: 'H8', tiles: '.RE', score: 4, leave: 'ADINO', equity: 8}];
             }
-            self.postMessage({id, result: {simulated: true, moves}});
+            self.postMessage({id, result: {simulated: false, moves}});
           };
         """
         self.page.route('**/quackle-worker.js', lambda route: route.fulfill(
@@ -436,6 +476,12 @@ class ReviewBrowserTest(unittest.TestCase):
         self.page.get_by_role('button', name='Start walkthrough', exact=True).click()
         expect(self.page.locator('.move-comparison')).to_be_visible()
         self.assertTrue(self.page.evaluate('Boolean(moveQualityResults.points[0].bestMove.tiles)'))
+        points = self.page.evaluate('moveQualityResults.points')
+        word_points = [point for point in points if point['turnIndex'] in (0, 1, 2)]
+        self.assertTrue(all(point['opportunity']['version'] == 1 for point in word_points))
+        self.assertTrue(all(point['reason'].startswith('Passes and tile exchanges')
+                            for point in points if point['turnIndex'] in (3, 4, 5)))
+        expect(self.page.locator('.luck-panel')).to_contain_text('3 of your 3 racks estimated')
 
     def test_analyze_turn_with_bundled_quackle(self):
         self.open_game()
@@ -445,6 +491,51 @@ class ReviewBrowserTest(unittest.TestCase):
         expect(self.page.locator('.moves-table tbody tr').first).to_be_visible()
         self.assertGreater(self.page.locator('.moves-table tbody tr').count(), 0)
         expect(self.page.get_by_role('button', name='Analyze this turn', exact=True)).to_be_enabled()
+
+    def test_frequency_failure_preserves_move_quality_and_can_be_retried(self):
+        self.page.route('**/wordfreq-en-25000-log.json',
+                        lambda route: route.fulfill(status=503, body='Unavailable'))
+        self.open_game()
+        self.page.get_by_role('button', name='Analyze move quality', exact=True).click()
+        expect(self.page.locator('.quality-panel .trend-status')).to_contain_text(
+            'Your review is ready', timeout=120_000)
+        expect(self.page.locator('.luck-panel')).to_contain_text('Word commonness could not load')
+        self.assertTrue(self.page.evaluate('moveQualityResults.points.length > 0'))
+        self.assertFalse(self.page.evaluate('moveQualityResults.points.some(point => point.opportunity)'))
+        self.page.unroute('**/wordfreq-en-25000-log.json')
+        self.page.get_by_role('button', name='Re-analyze moves', exact=True).click()
+        expect(self.page.locator('.quality-panel .trend-status')).to_contain_text(
+            'Your review is ready', timeout=120_000)
+        expect(self.page.locator('.luck-panel')).not_to_contain_text('Word commonness could not load')
+        self.assertTrue(self.page.evaluate('moveQualityResults.points.some(point => point.opportunity)'))
+
+    def test_real_engine_produces_weighted_performance_for_a_rated_move(self):
+        # A synthetic opening with a short rack and a top static candidate.
+        grid = ['.' * 15 for _ in range(15)]
+        after = grid.copy()
+        after[7] = '.......ACT.....'
+        self.use_saved_analysis({}, turns=[{
+            'index': 0, 'mine': True, 'action': 'ACT 8H 6', 'score': 6,
+            'rack': 'CAT', 'grid': grid, 'grid_after': after,
+            'bag_count': 90, 'final_turns_remaining': 0,
+            'mover_score': 0, 'other_score': 0,
+        }], my_score=6, opponent_score=0, turn_count=1)
+        self.open_game()
+        self.page.get_by_role('button', name='Analyze move quality', exact=True).click()
+        expect(self.page.locator('.quality-panel .trend-status')).to_contain_text(
+            'Your review is ready', timeout=120_000)
+        expect(self.page.locator('.luck-panel')).to_contain_text('1 of your 1 turns weighted')
+        expect(self.page.locator('.luck-stat').nth(1).locator('strong')).to_have_text('100 / 100')
+        expect(self.page.locator('.luck-stat').nth(2).locator('strong')).to_have_text('100 / 100')
+        self.page.locator('.luck-breakdown summary').click()
+        expect(self.page.locator('.luck-table')).to_contain_text('ACT · Common')
+        first_points = self.page.evaluate('moveQualityResults.points')
+        self.assertEqual(self.page.evaluate('moveQualityResults.evaluation'), 'static-equity-v1')
+        self.page.get_by_role('button', name='Re-analyze moves', exact=True).click()
+        expect(self.page.locator('.quality-panel .trend-status')).to_contain_text(
+            'Your review is ready', timeout=120_000)
+        self.assertEqual(self.page.evaluate('moveQualityResults.points'), first_points,
+                         'Move quality must not inherit luck from random simulations')
 
 
 if __name__ == '__main__':

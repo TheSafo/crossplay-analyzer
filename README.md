@@ -20,6 +20,25 @@ Choose **Start walkthrough** to review the game from the first turn. Step forwar
 
 Each analyzed turn explains its grade and, when candidates are available, compares the played move with Quackle’s best candidate, including points, rack leave, and equity. **Preview best move** places the candidate on the board before that turn; **Return to played move** restores the replay. New completed analyses save these comparisons with the game. Older saved grades still work; re-analyze to add comparisons. Grades use provisional equity-loss bands (Best <1, Inaccuracy 1–<3, Mistake 3–<8, Blunder ≥8), rather than win probability. Passes, exchanges, invalid positions, and played moves outside the returned top 15 stay unrated; an available best candidate can still be previewed for an unmatched play.
 
+**Luck & performance** estimates how favorable your racks were compared with
+2,048 reproducible samples of the same size from Crossplay tiles not on the
+board. The tile-flexibility heuristic rewards blanks, S, balanced vowels and
+consonants, and flexible letters, while penalizing duplicates and awkward
+combinations. A score of 50 is typical. This is rack ease, not pure draw luck:
+retained tiles reflect previous choices, and repeated racks are not independent.
+The estimate does not model board openings or opponent decisions.
+
+**Analyze move quality** also produces execution and adjusted performance scores
+from 0–100. Move quality uses Quackle's deterministic position evaluation rather
+than sampled draws. Execution converts each rated turn's Quackle equity loss with
+`100 / (1 + loss / 10)`. Adjusted performance discounts less-common candidate
+words using the bundled wordfreq list, then gives tougher racks up to twice the
+weight. Unknown words receive no discount. Coverage, a replayable turn breakdown,
+frequency attribution, and the full provisional formulas appear in the panel.
+These scores do not assign a percentage of the result to skill or luck. Existing
+saved reviews still work; re-analyze moves to add word-opportunity data. New data
+is saved with move-quality results and is available on shared reviews.
+
 Opening a finished game puts its shareable URL in the address bar. Send that URL to a friend, or expand **Share this game** and use **Copy game link**. Anyone with the link can replay that game and view player names, scores, racks, and saved analysis without signing in or connecting an NYT account. Links use a random token and grant access only to that game. Guests can run Quackle in their own browser; their analysis does not change the owner's saved results.
 
 Hosted links persist in Supabase. Apply all migrations in `supabase/migrations/` before deploying this feature. Local links last until the owner's local session expires, its cookie is forgotten or replaced, or the server restarts; recipients must be able to reach the server's address. For synthetic data without real credentials, use `npm run frontend` as described under Tests.
