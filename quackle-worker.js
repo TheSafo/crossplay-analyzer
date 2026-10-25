@@ -157,6 +157,14 @@ self.addEventListener('message', async event => {
       result = { info: module.getEngineInfo() };
     } else if (type === 'evaluateMove' || type === 'simulateMove') {
       result = evaluateCustomMove(module, payload, type === 'simulateMove');
+    } else if (type === 'kibitz') {
+      result = module.kibitz(
+        payload.gridJson,
+        payload.rack,
+        payload.playerScore,
+        payload.opponentScore,
+        payload.numMoves,
+      );
     } else if (type === 'simulateKibitz') {
       if (!Number.isInteger(payload.bagCount) || !Number.isInteger(payload.finalTurnsRemaining)) {
         throw new Error('Bag count and final-turn state must be integers');

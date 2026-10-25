@@ -139,6 +139,16 @@
   .analysis-button { color: #fff; background: #2b714f; border-color: #2b714f; font-size: 12px; }
   .analysis-button:hover:not(:disabled) { color: #fff; background: #205b3e; border-color: #205b3e; }
   .analysis-note { margin-top: 9px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+  .luck-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .luck-stat { min-width: 0; padding: 12px; border-radius: 8px; background: #f5f7f1; }
+  .luck-stat strong { display: block; margin: 5px 0; font-size: 24px; letter-spacing: -.6px; }
+  .luck-stat small { display: block; color: var(--muted); font-size: 10px; }
+  .luck-table { width: 100%; margin-top: 12px; border-collapse: collapse; font-size: 11px; }
+  .luck-table th, .luck-table td { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+  .luck-table th { color: var(--muted); font-size: 10px; font-weight: 500; }
+  .luck-table button { padding: 4px 7px; font-size: 11px; }
+  .luck-rack { font-family: 'SFMono-Regular', Consolas, monospace; overflow-wrap: anywhere; }
+  .luck-word { display: block; color: var(--muted); font-size: 10px; }
   .insights-panel { padding: 19px 20px; }
   .insight-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
   .insight { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px; text-align: left; background: #fafbf8; }
@@ -210,6 +220,7 @@
     .insight-list { grid-template-columns: 1fr; }
   }
   @media (max-width: 760px) {
+    .luck-stats { grid-template-columns: 1fr; gap: 8px; }
     .container { padding: 0 16px 24px; }
     .masthead { min-height: 74px; flex-wrap: wrap; gap: 12px; padding: 15px 0; margin-bottom: 21px; }
     .brand { font-size: 18px; }
@@ -300,6 +311,7 @@
 
 <script src="supabase-config.js"></script>
 <script src="supabase-auth.js"></script>
+<script src="luck-analysis.js"></script>
 <script>
 const PREMIUM_COORDS = {
   '3L': 'A1 O1 G2 I2 F5 J5 E6 K6 B7 N7 B9 N9 E10 K10 F11 J11 G14 I14 A15 O15',
@@ -676,7 +688,7 @@ function renderReview() {
   dashboard.append(makeDashboardStats(review));
   const charts = makeElement('div', 'dashboard-charts');
   charts.append(makeScorePanel(review), makeMoveQualityPanel(review));
-  dashboard.append(charts, makeInsightsPanel(review));
+  dashboard.append(charts, makeLuckPanel(review), makeInsightsPanel(review));
   root.append(dashboard);
 
   const replayHeading = makeElement('div', 'replay-heading');
@@ -818,6 +830,85 @@ function makeDashboardStats(review) {
     stats.append(card);
   }
   return stats;
+}
+
+function makeLuckPanel(review) {
+  const summary = CrossplayLuck.summarize(review, moveQualityResults?.points || []);
+  const panel = makeElement('section', 'panel luck-panel');
+  panel.append(makeElement('h3', '', 'Luck & performance'), makeElement('p', 'panel-subtitle', 'How favorable your racks were, and what you made of them'));
+  const stats = makeElement('div', 'luck-stats');
+  const score = value => Number.isFinite(value) ? Math.round(value) + ' / 100' : '—';
+  const partial = moveQualityResults && moveQualityResults.state !== 'done' ? ' · partial analysis' : '';
+  const values = [
+    ['Rack favorability', score(summary.favorability), summary.rackCount + ' of your ' + summary.turns.length + ' racks estimated · 50 is typical'],
+    ['Execution', score(summary.execution), summary.ratedCount + ' of your ' + summary.turns.length + ' turns rated' + partial],
+    ['Adjusted performance', score(summary.adjusted), summary.adjustedCount + ' of your ' + summary.turns.length + ' turns weighted' + partial]
+  ];
+  for (const [label, value, note] of values) {
+    const card = makeElement('div', 'luck-stat');
+    card.append(makeElement('span', 'dashboard-stat-label', label), makeElement('strong', '', value), makeElement('small', '', note));
+    stats.append(card);
+  }
+  panel.append(stats);
+  panel.append(makeElement('p', 'analysis-note', 'Rack favorability estimates tile flexibility. Execution measures your choices against Quackle; adjusted performance gives harder racks more weight and allows for less-common alternatives. These are provisional scores, not win odds or a percentage of the result caused by luck.'));
+  if (!summary.adjustedCount) {
+    const note = !moveQualityResults ? 'Use Analyze move quality above to add execution and adjusted performance.'
+      : moveQualityResults.state === 'running' ? 'Analysis is running. Performance will appear as eligible turns are rated.'
+      : summary.ratedCount ? 'Re-analyze moves to include word commonness in performance. Only turns with a rated move, a valid rack estimate, and word-opportunity analysis can be weighted.'
+      : 'No eligible rated turns yet. Passes, exchanges, and moves outside Quackle’s returned candidates are excluded from performance.';
+    panel.append(makeElement('p', 'analysis-note', note));
+  }
+  if (summary.adjustedCount) {
+    panel.append(makeElement('p', 'analysis-note', 'Word frequency available for ' + summary.knownWords + ' of ' + summary.candidateWords + ' candidate entries on weighted turns. Words outside the local list stay unknown and receive no familiarity allowance.'));
+  }
+  if (moveQualityResults?.frequencyWarning) panel.append(makeElement('p', 'analysis-note', moveQualityResults.frequencyWarning));
+  const breakdown = makeElement('details', 'estimate-details luck-breakdown');
+  breakdown.append(makeElement('summary', '', 'Your turn-by-turn breakdown'));
+  const table = makeElement('table', 'luck-table');
+  const head = document.createElement('thead');
+  const headings = document.createElement('tr');
+  for (const label of ['Turn', 'Rack / best word', 'Favorability', 'Adjusted loss']) headings.append(makeElement('th', '', label));
+  head.append(headings);
+  const body = document.createElement('tbody');
+  for (const item of summary.turns) {
+    const row = document.createElement('tr');
+    const turnCell = document.createElement('td');
+    const button = makeElement('button', '', item.index + 1);
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Replay turn ' + (item.index + 1) + ' from luck breakdown');
+    button.addEventListener('click', () => {
+      selectTurn(item.index);
+      byId('replayHeading')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      byId('reviewPanel').querySelector('select[aria-label="Select game turn"]')?.focus({ preventScroll: true });
+    });
+    turnCell.append(button);
+    const rackCell = makeElement('td', 'luck-rack', item.turn.rack || 'Unavailable');
+    const context = item.point?.opportunity;
+    if (context?.bestWord) {
+      const zipf = context.bestWordZipf;
+      const familiarity = Number.isFinite(zipf) ? (zipf >= 4 ? 'Common' : zipf >= 3 ? 'Familiar' : 'Less common') : 'Frequency unknown';
+      rackCell.append(makeElement('span', 'luck-word', context.bestWord + ' · ' + familiarity));
+    }
+    const favorability = item.rack ? Math.round(item.rack.percentile) + ' · ' + item.rack.band : 'Unavailable';
+    const adjustedLoss = item.performance?.adjustedLoss;
+    row.append(turnCell, rackCell, makeElement('td', '', favorability), makeElement('td', '', Number.isFinite(adjustedLoss) ? adjustedLoss.toFixed(1) + ' eq' : 'Unrated'));
+    body.append(row);
+  }
+  table.append(head, body);
+  breakdown.append(table);
+  panel.append(breakdown);
+  const method = makeElement('details', 'estimate-details');
+  method.append(makeElement('summary', '', 'How luck and performance are estimated'));
+  method.append(makeElement('p', 'analysis-note', 'Each rack is compared with 2,048 deterministic samples of the same size, drawn without replacement from Crossplay tiles not yet on the board. The percentile measures a tile-flexibility heuristic: blanks +12, S +3, E/R/N/T +0.8 each; vowel imbalance −2.5 per tile from a 42% target (blanks can balance it), duplicate pairs −1.5, J −2, V −1.5, W/K −1, and Q without U or a blank −6. Assigned blanks on the board consume physical blanks. Rack order does not matter.'));
+  method.append(makeElement('p', 'analysis-note', 'The game value averages your rack percentiles, including pass and exchange turns with valid racks. Retained tiles reflect earlier choices, so repeated racks are not independent draws. This estimates rack ease, not pure draw luck; it does not model board openings, opponent decisions, or the actual sequence of draws.'));
+  method.append(makeElement('p', 'analysis-note', 'Execution averages 100 / (1 + equity loss / 10). For adjusted loss, each returned candidate’s equity is reduced by 2 × max(0, 4 − Zipf frequency of its main word), capped at 6 points; unknown words receive no reduction. The best resulting benchmark is compared with your played equity, with loss floored at zero and capped at the original loss. The same 0–100 conversion is weighted by 1 + (100 − rack percentile) / 100, so tougher racks count up to twice as much. Only your eligible turns are included. Passes, exchanges, and moves outside Quackle’s top ' + MOVE_COUNT + ' remain unrated.'));
+  const attribution = makeElement('p', 'analysis-note', 'General English frequency is a rough familiarity signal, not Scrabble vocabulary. Source: wordfreq / Alex Parrish, CC BY-SA 4.0. ');
+  const link = makeElement('a', '', 'Frequency source and attribution');
+  link.href = 'WORD_FREQUENCY.md';
+  attribution.append(link);
+  method.append(attribution);
+  panel.append(method);
+  return panel;
 }
 
 function makeScorePanel(review) {
@@ -1004,7 +1095,7 @@ function makeMoveQualityPanel(review) {
     }
     panel.append(legend);
   }
-  panel.append(makeElement('p', 'analysis-note', 'Equity estimates points plus rack value. Lower loss is better.'));
+  panel.append(makeElement('p', 'analysis-note', 'Equity estimates points plus rack value. Lower loss is better. New analyses use deterministic position evaluation, without sampled draws.'));
   const methodology = makeElement('details', 'estimate-details');
   methodology.append(makeElement('summary', '', 'How move quality is measured'), makeElement('p', 'analysis-note', 'Only your turns are shown. Loss is the gap from the played move to Quackle’s best returned candidate. Provisional bands: Best <1 point; Inaccuracy 1–<3; Mistake 3–<8; Blunder ≥8. Equity is not win probability. Passes, exchanges, and moves outside the top ' + MOVE_COUNT + ' are unrated.'));
   panel.append(methodology);
@@ -1079,6 +1170,7 @@ function refreshMoveQualityPanel() {
   if (currentReview) {
     byId('reviewPanel').querySelector('.dashboard-stats')?.replaceWith(makeDashboardStats(currentReview));
     byId('reviewPanel').querySelector('.insights-panel')?.replaceWith(makeInsightsPanel(currentReview));
+    byId('reviewPanel').querySelector('.luck-panel')?.replaceWith(makeLuckPanel(currentReview));
   }
   const points = moveQualityResults && moveQualityResults.points || [];
   byId('reviewPanel').querySelectorAll('.turn-row').forEach((row, index) => {
@@ -1263,11 +1355,14 @@ async function startMoveQuality(review) {
     return;
   }
   const token = ++moveQualityRequestToken;
-  moveQualityResults = { state: 'running', points: [], current: 0, message: 'Preparing Quackle…' };
+  moveQualityResults = { state: 'running', evaluation: 'static-equity-v1', points: [], current: 0, message: 'Preparing Quackle…' };
   refreshMoveQualityPanel();
   const turns = review.turns;
   try {
     await loadQuackle();
+    const frequencies = await loadWordFrequency().catch(() => null);
+    if (token !== moveQualityRequestToken || activeGameId !== review.id) return;
+    if (!frequencies) moveQualityResults.frequencyWarning = 'Word commonness could not load. Move quality is still available; re-analyze moves to retry adjusted performance.';
     for (let index = 0; index < turns.length; index++) {
       if (token !== moveQualityRequestToken || activeGameId !== review.id) return;
       const turn = turns[index];
@@ -1280,20 +1375,15 @@ async function startMoveQuality(review) {
       } else if (!actionWord(turn.action)) {
         point = makeUnratedPoint(index, turn, 'Passes and tile exchanges have no played word to compare.');
       } else {
-        const bagCount = Number(turn.bag_count);
-        const finalTurnsRemaining = bagCount === 0 ? Number(turn.final_turns_remaining) : 0;
-        const result = await workerRequest('simulateKibitz', {
+        const result = await workerRequest('kibitz', {
           gridJson: JSON.stringify(turn.grid),
           rack: String(turn.rack),
           playerScore: Number(turn.mover_score) || 0,
           opponentScore: Number(turn.other_score) || 0,
-          numMoves: MOVE_COUNT,
-          iterations: 1,
-          bagCount,
-          finalTurnsRemaining
+          numMoves: MOVE_COUNT
         });
         if (token !== moveQualityRequestToken || activeGameId !== review.id) return;
-        if (!result || result.simulated !== true || !Array.isArray(result.moves)) {
+        if (!result || result.error || result.simulated !== false || !Array.isArray(result.moves)) {
           throw new Error('Quackle did not return move candidates for turn ' + (index + 1) + '.');
         }
         const moves = result.moves;
@@ -1322,6 +1412,7 @@ async function startMoveQuality(review) {
             candidateCount: moves.length
           };
         }
+        if (frequencies) point.opportunity = CrossplayLuck.opportunityContext(turn, moves, frequencies, candidateWord);
       }
       moveQualityResults.points.push(point);
       moveQualityResults.current = index + 1;
@@ -1525,6 +1616,7 @@ function wordFrequencyLabel(word, frequencies) {
 function actionWord(action) {
   const token = String(action || '').trim().split(/\s+/)[0] || '';
   const word = token.replace(/[()]/g, '').toUpperCase();
+  if (['PASS', 'SWAP', 'EXCHANGE'].includes(word)) return '';
   return /^[A-Z]{2,15}$/.test(word) ? word : '';
 }
 
