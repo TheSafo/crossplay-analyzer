@@ -22,6 +22,19 @@ Hosted links persist in Supabase. Apply all migrations in `supabase/migrations/`
 
 The screenshot parser is at `/screenshot.html` and the manual board page is at `/manual.html`. Screenshot parsing and the bundled Quackle engine run locally in the browser.
 
+Use **Try a custom move** on any analysis page to evaluate a word outside
+Quackle’s suggested moves. Enter the word, its start square (for example, `G8`),
+and Across or Down. Include existing board letters or use `.` for them; uppercase
+letters use regular rack tiles and lowercase letters use blanks. Game reviews
+evaluate against the board and rack **before** the selected turn.
+
+The result compares score, rack leave, and static equity with the best legal
+move. **Estimate win% (slower)** runs 277 samples per candidate and compares
+simulated equity and win chances. Moves far down the static ranking take longer
+because the bundled engine must simulate the candidates above them too. You can
+cancel a custom evaluation independently of other analysis. Custom results stay
+in the current page and do not alter the recorded game or saved move-quality review.
+
 ## Datadog
 
 All integrations target the US5 site, `us5.datadoghq.com`, with service

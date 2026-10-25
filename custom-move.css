@@ -1,0 +1,20 @@
+.custom-move { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line, #444); font-size: 12px; }
+.custom-move h3 { margin-bottom: 6px; font-size: 14px; }
+.custom-move-note, .custom-move-help { color: var(--muted, #999); line-height: 1.6; }
+.custom-move-form { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.custom-move-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.custom-move-form input, .custom-move-form select { box-sizing: border-box; min-width: 0; width: 105px; border: 1px solid var(--line, #555); border-radius: 6px; background: transparent; color: inherit; padding: 8px; font: inherit; }
+.custom-move-form input[name="word"] { width: 140px; }
+.custom-move-form input[name="square"] { width: 78px; text-transform: uppercase; }
+.custom-move-form select option { background: var(--paper, #16213e); }
+.custom-move button { font-size: 11px; padding: 8px 10px; }
+.custom-move button:disabled { opacity: .5; cursor: not-allowed; }
+.custom-move-help { margin: 7px 0; font-size: 10px; }
+.custom-move-status { margin: 8px 0; min-height: 18px; overflow-wrap: anywhere; }
+.custom-move-error { color: #bf5656; }
+.custom-move-result { overflow-x: auto; }
+.custom-move-result table { width: 100%; border-collapse: collapse; font-size: 10px; }
+.custom-move-result th, .custom-move-result td { padding: 7px 4px; text-align: left; border-bottom: 1px solid var(--line, #444); overflow-wrap: anywhere; }
+.custom-move-result th:not(:first-child), .custom-move-result td:not(:first-child) { white-space: nowrap; overflow-wrap: normal; }
+.custom-move-result tbody tr:first-child { font-weight: 700; background: rgba(80, 160, 100, .1); }
+.custom-move-comparison { margin: 10px 0 6px; font-weight: 600; }
